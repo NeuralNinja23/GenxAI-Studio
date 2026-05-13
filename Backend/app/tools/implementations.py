@@ -21,6 +21,7 @@ import ast
 import json
 import asyncio
 import subprocess
+from datetime import datetime, timezone as tz
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -36,26 +37,7 @@ from app.utils.path_utils import get_project_path
 from app.tools.patching import PatchEngine, apply_unified_patch
 from app.core.logging import log
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# TIT: Tool Invocation Trace
-# ═══════════════════════════════════════════════════════════════════════════════
-from datetime import datetime, timezone as tz
 
-def _get_tit_enabled():
-    """Check if TIT is enabled (lazy import to avoid circular deps)."""
-    try:
-        from app.arbormind.observation.tool_trace import ARBORMIND_TIT_ENABLED
-        return ARBORMIND_TIT_ENABLED
-    except ImportError:
-        return False
-
-def _record_tit_event(event):
-    """Record TIT event (fire-and-forget)."""
-    try:
-        from app.arbormind.observation.tool_trace import record_tool_invocation
-        record_tool_invocation(event)
-    except Exception:
-        pass  # TIT must never crash execution
 # =====================================================================
 # Global Sandbox Singleton (LAZY INITIALIZATION)
 # =====================================================================
@@ -71,10 +53,6 @@ def get_sandbox() -> SandboxManager:
 # For backward compatibility - callers should use get_sandbox() instead
 # DEPRECATED: Direct SANDBOX access will be removed in future
 SANDBOX: Optional[SandboxManager] = None  # Set to None initially
-
-
-
-
 
 # =====================================================================
 # FIX ASYNC-001: Async subprocess helper to avoid blocking event loop
@@ -128,40 +106,6 @@ async def _async_run_command(
             "returncode": -1,
             "error": str(e),
         }
-    finally:
-        # ═══════════════════════════════════════════════════════════════════
-        # TIT Hook: Process Boundary
-        # ═══════════════════════════════════════════════════════════════════
-        if _get_tit_enabled():
-            try:
-                from app.arbormind.observation.tool_trace import build_tool_event
-                from app.arbormind.observation.execution_ledger import get_current_run_id
-                
-                run_id = get_current_run_id() or "unknown"
-                ended = datetime.now(tz.utc)
-                
-                # Determine status
-                status = "success"
-                if 'proc' in dir() and proc.returncode != 0:
-                    status = "failure"
-                elif 'e' in dir():
-                    status = "failure"
-                
-                tit_event = build_tool_event(
-                    run_id=run_id,
-                    step="process_boundary",
-                    agent="System",
-                    tool_name="_async_run_command",
-                    tool_type="process",
-                    invocation_index=0,
-                    called_at=datetime.now(tz.utc),
-                    duration_ms=None,
-                    status=status,
-                    input_args={"command": str(cmd)[:512], "cwd": cwd},
-                )
-                _record_tit_event(tit_event)
-            except Exception:
-                pass  # TIT must never crash execution
 
 
 # =====================================================================
@@ -346,7 +290,7 @@ async def tool_sub_agent_caller(args: Dict[str, Any]) -> Dict[str, Any]:
                     "token_usage": token_usage,  # V3: Propagate usage
                 }
 
-        # 2) Try issues[0].raw
+        # 2) Try issues[0].raw - salvage from truncated/rejected output
         issues = result.get("issues") or []
         if issues:
             raw = issues[0].get("raw")
@@ -356,11 +300,15 @@ async def tool_sub_agent_caller(args: Dict[str, Any]) -> Dict[str, Any]:
                     parsed = normalize_llm_output(raw, step_name=step_name)
                     normalized = normalize_files_schema(parsed)
                     if normalized is not None:
+                        # Log that we're recovering from a failure
+                        log("HDAP", f"⚠️ Salvaged {len(normalized.get('files', []))} files from HDAP issues")
                         return {
                             "success": True,
                             "output": normalized,
                             "agent": sub_agent,
                             "source": "salvaged_from_issues",
+                            "salvaged_truncation": True,  # Mark as recovered failure
+                            "original_issues": issues,  # Preserve original issues
                             "token_usage": token_usage,  # V3: Propagate usage
                         }
                 except Exception:
@@ -387,35 +335,6 @@ async def tool_sub_agent_caller(args: Dict[str, Any]) -> Dict[str, Any]:
 
         # Fallback: just return whatever we have
         
-        # ═══════════════════════════════════════════════════════════════════
-        # TIT Hook: LLM Boundary (Success/Partial)
-        # ═══════════════════════════════════════════════════════════════════
-        llm_success = result.get("passed", False)
-        if _get_tit_enabled():
-            try:
-                from app.arbormind.observation.tool_trace import build_tool_event
-                from app.arbormind.observation.execution_ledger import get_current_run_id
-                
-                run_id = get_current_run_id() or "unknown"
-                
-                tit_event = build_tool_event(
-                    run_id=run_id,
-                    step=step_name,
-                    agent=sub_agent,
-                    tool_name="subagentcaller",
-                    tool_type="llm",
-                    invocation_index=0,
-                    called_at=llm_start,
-                    duration_ms=llm_duration,
-                    status="success" if llm_success else "failure",
-                    tokens_used=token_usage.get("input", 0) + token_usage.get("output", 0),
-                    model_name=args.get("model"),
-                    retries=1 if is_retry else 0,
-                )
-                _record_tit_event(tit_event)
-            except Exception:
-                pass
-        
         return {
             "success": result.get("passed", False),
             "output": parsed if parsed is not None else raw_generation,
@@ -427,35 +346,6 @@ async def tool_sub_agent_caller(args: Dict[str, Any]) -> Dict[str, Any]:
 
     except Exception as e:
         import traceback
-        llm_end = datetime.now(tz.utc)
-        
-        # ═══════════════════════════════════════════════════════════════════
-        # TIT Hook: LLM Boundary (Failure)
-        # ═══════════════════════════════════════════════════════════════════
-        if _get_tit_enabled():
-            try:
-                from app.arbormind.observation.tool_trace import build_tool_event
-                from app.arbormind.observation.execution_ledger import get_current_run_id
-                
-                run_id = get_current_run_id() or "unknown"
-                duration = int((llm_end - llm_start).total_seconds() * 1000) if 'llm_start' in dir() else None
-                
-                tit_event = build_tool_event(
-                    run_id=run_id,
-                    step=args.get("step_name", "unknown"),
-                    agent=args.get("sub_agent", "unknown"),
-                    tool_name="subagentcaller",
-                    tool_type="llm",
-                    invocation_index=0,
-                    called_at=llm_start if 'llm_start' in dir() else datetime.now(tz.utc),
-                    duration_ms=duration,
-                    status="failure",
-                    error=e,
-                    retries=1 if args.get("is_retry") else 0,
-                )
-                _record_tit_event(tit_event)
-            except Exception:
-                pass
         
         return {
             "success": False,

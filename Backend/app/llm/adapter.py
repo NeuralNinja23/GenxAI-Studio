@@ -75,11 +75,11 @@ class LLMAdapter:
     
     Handles:
     - Provider selection
-    - SINGLE EXECUTION (ArborMind handles retry via branch continuation)
+    - SINGLE EXECUTION (orchestrator handles retry decisions)
     - Rate limit handling (raises LLMError)
     
     NO FALLBACK: If the primary provider fails, the request fails.
-    NO RETRIES: ArborMind decides if/when to retry via branch continuation.
+    NO RETRIES: Orchestrator decides if/when to retry.
     """
     
     def __init__(self):
@@ -160,7 +160,7 @@ class LLMAdapter:
         """
         Call a specific provider - SINGLE ATTEMPT ONLY.
         
-        ArborMind handles retry decisions via branch continuation.
+        Orchestrator handles retry decisions.
         This adapter is pure execution muscle.
         """
         # Import here to avoid circular imports
@@ -179,7 +179,7 @@ class LLMAdapter:
         call_func = provider_map[provider]
 
         # SINGLE EXECUTION - No retry loop
-        # ArborMind decides if/when to retry via branch continuation
+        # Orchestrator decides if/when to retry
         try:
             response = await call_func(
                 prompt=prompt,
@@ -191,7 +191,7 @@ class LLMAdapter:
             )
             return response
         except Exception as e:
-            # Report the failure - ArborMind decides what to do next
+            # Report the failure - orchestrator decides what to do next
             raise LLMError(provider, f"Provider error: {e}")
 
 

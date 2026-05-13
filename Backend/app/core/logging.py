@@ -11,6 +11,8 @@ from typing import Any, Optional, List
 # Everything else is gated behind DEBUG
 
 INFO_SCOPES = {
+    "ARBORMIND",    # Brain logs
+    "FAST",         # Muscle logs
     "FAST-V2",      # Step lifecycle
     "PLANNER",      # Execution intent  
     "TOOL-EXEC",    # Actual execution
@@ -20,6 +22,7 @@ INFO_SCOPES = {
     "HDAP",         # File protocol
     "LOCKFILE",     # Cache hits
 }
+
 
 # DEBUG-only scopes (hidden by default)
 DEBUG_SCOPES = {

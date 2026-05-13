@@ -99,25 +99,8 @@ def observe_handler(step_name: str, agent_name: str = "System"):
 
 
 def _record_handler_start(plan: ToolPlan, step: str, agent: str):
-    """Record handler execution start to ArborMind."""
+    """Record handler execution start."""
     log("TOOL-OBS", f"▶️ [{step}] Starting (agent={agent}, plan={plan.plan_id})")
-    
-    try:
-        from app.arbormind.observation.execution_ledger import record_decision, get_current_run_id
-        
-        run_id = get_current_run_id()
-        if run_id:
-            record_decision(
-                run_id=run_id,
-                step=step,
-                agent=agent,
-                action="HANDLER_INVOKE",
-                tool="supervised_agent_call",
-                outcome="pending",
-                reason=f"Executing {step} via legacy handler",
-            )
-    except Exception:
-        pass
 
 
 def _record_handler_end(
@@ -129,41 +112,9 @@ def _record_handler_end(
     result: Any = None,
     error: Optional[str] = None,
 ):
-    """Record handler execution end to ArborMind."""
+    """Record handler execution end."""
     status = "✅" if success else "❌"
     log("TOOL-OBS", f"{status} [{step}] Completed in {duration_ms}ms")
-    
-    try:
-        from app.arbormind.observation.execution_ledger import update_decision_outcome, get_current_run_id
-        
-        run_id = get_current_run_id()
-        if run_id:
-            update_decision_outcome(
-                run_id=run_id,
-                step=step,
-                outcome="success" if success else "failure",
-                duration_ms=duration_ms,
-                artifacts_count=1 if success else 0,
-            )
-    except Exception:
-        pass
-    
-    # Record failure to learning layer
-    if not success and error:
-        try:
-            from app.arbormind.learning import ingest_runtime_exception
-            from app.arbormind.observation.execution_ledger import get_current_run_id
-            
-            run_id = get_current_run_id()
-            if run_id:
-                ingest_runtime_exception(
-                    run_id=run_id,
-                    step=step,
-                    exception_info=f"Handler failed: {error}",
-                    agent=agent,
-                )
-        except Exception:
-            pass
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

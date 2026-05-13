@@ -16,7 +16,7 @@ from app.llm import call_llm, call_llm_with_usage
 from app.llm.prompts import MARCUS_SUPERVISION_PROMPT
 from app.tracking.quality import track_quality_score
 from app.orchestration.checkpoint import CheckpointManagerV2
-from app.arbormind.observation.execution_ledger import record_supervisor_event, get_current_run_id
+
 
 
 async def marcus_supervise(
@@ -65,10 +65,6 @@ async def marcus_supervise(
         
         # 🧠 SQLITE: Record pre-flight rejection
         _record_verdict(step_name, agent_name, False, 1, rejection_reasons)
-        
-        # 🧠 ARBORMIND LEARNING: Ingest F2 (Parse Failure) - DISABLED FOR PHASE 3
-        # run_id = get_current_run_id()
-        # if run_id:
         #     ingest_parse_failure(
         #         run_id=run_id,
         #         step=step_name,
@@ -104,16 +100,6 @@ async def marcus_supervise(
         issues = [f"Output was truncated. Incomplete files: {', '.join(incomplete_files)}"]
         _record_verdict(step_name, agent_name, False, 1, issues)
         
-        # 🧠 ARBORMIND LEARNING: Ingest F3 (Truncation) - DISABLED FOR PHASE 3
-        # run_id = get_current_run_id()
-        # if run_id:
-        #     ingest_truncation(
-        #         run_id=run_id,
-        #         step=step_name,
-        #         error_message=f"Output truncated. Incomplete files: {', '.join(incomplete_files)}",
-        #         agent=agent_name,
-        #     )
-        
         return {
             "approved": False,
             "quality_score": 1,
@@ -129,7 +115,6 @@ async def marcus_supervise(
     # Cognition steps (analysis, etc.) may produce no files
     
     from app.supervision.tiered_review import get_review_level, ReviewLevel
-    from app.arbormind.cognition.partial_output import allows_partial_output
     
     is_cognition_step = step_name.lower() in ["classification", "routing", "refine"]
 
@@ -149,17 +134,6 @@ async def marcus_supervise(
             # 🧠 SQLITE: Record zero-file rejection
             issues = ["No files were generated. This step must produce at least one file."]
             _record_verdict(step_name, agent_name, False, 0, issues)
-            
-            # 🧠 ARBORMIND LEARNING: Ingest F1 (Invariant Violation - zero files) - DISABLED FOR PHASE 3
-            # run_id = get_current_run_id()
-            # if run_id:
-            #     ingest_invariant_violation(
-            #         run_id=run_id,
-            #         step=step_name,
-            #         error_message="Zero files generated in critical step",
-            #         scope=FailureScope.STEP_LOCAL,
-            #         agent=agent_name,
-            #     )
             
             return {
                 "approved": False,
@@ -442,27 +416,7 @@ RESPOND WITH JSON:
                 }
             )
         
-        # 🧠 OBSERVATION: Record Supervisor Event
-        run_id = get_current_run_id()
-        if run_id:
-            record_supervisor_event(
-                run_id=run_id,
-                step=step_name,
-                agent=agent_name,
-                verdict="APPROVED" if approved else "REJECTED",
-                quality=quality,
-                issues=issues if not approved else []
-            )
-        
-        # 🧠 ARBORMIND LEARNING: Ingest F4 (Quality Rejection) if rejected - DISABLED FOR PHASE 3
-        # if not approved:
-        #     run_id = get_current_run_id()
-        #     if run_id:
-        #         ingest_quality_rejection(
-        #             run_id=run_id,
-        #             step=step_name,
-        #             rejection_reasons=f"Quality: {quality}/10. Issues: {'; '.join(issues[:5])}",
-        #             agent=agent_name,
+
         #         )
         
         return result
@@ -487,16 +441,6 @@ RESPOND WITH JSON:
             log("MARCUS", f"⚠️ Review failed: TRANSIENT_INFRA_FAILURE ({str(e)[:100]})", project_id=project_id)
             # 🧠 SQLITE: Record infrastructure failure (as verdict=rejected)
             _record_verdict(step_name, agent_name, False, 3, [str(e)])
-            
-            # 🧠 ARBORMIND LEARNING: Ingest F9 (External Failure) - DISABLED FOR PHASE 3
-            # run_id = get_current_run_id()
-            # if run_id:
-            #     ingest_external_failure(
-            #         run_id=run_id,
-            #         step=step_name,
-            #         external_error=f"TRANSIENT_INFRA_FAILURE: {str(e)}",
-            #         agent=agent_name,
-            #     )
             
             return {
                 "approved": False,
@@ -619,7 +563,7 @@ async def supervised_agent_call(
     is_retry: bool = False,
 ) -> Dict[str, Any]:
     """
-    Call an agent with Marcus supervision (ArborMind Muscle).
+    Call an agent with Marcus supervision.
     """
     from app.tools import run_tool
     from app.llm.prompt_management import filter_files_for_step

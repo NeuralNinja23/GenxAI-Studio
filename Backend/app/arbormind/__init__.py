@@ -1,8 +1,17 @@
 # app/arbormind/__init__.py
-"""
-ArborMind Framework.
-Cognitive architecture for autonomous code generation.
 
-Legacy components (Router, Evolution, V1 Explorer) have been removed.
-Refer to app.arbormind.runtime and app.arbormind.cognition for the current system.
-"""
+from .adapters import ArborMindOrchestrator, Oracle, Agent
+from .phase_1 import ExecutionState, FailureRecord
+from .phase_2 import CognitiveDirective
+from .phase_3 import ConvergenceEngine, DivergenceController
+
+__all__ = [
+    "ArborMindOrchestrator",
+    "Oracle",
+    "Agent",
+    "ExecutionState",
+    "FailureRecord",
+    "CognitiveDirective",
+    "ConvergenceEngine",
+    "DivergenceController",
+]

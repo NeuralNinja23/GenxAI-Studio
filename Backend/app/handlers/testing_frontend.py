@@ -18,7 +18,7 @@ from app.llm.prompts.luna_testing import LUNA_TESTING_PROMPT
 
 from app.core.constants import PROTECTED_SANDBOX_FILES
 from app.core.failure_boundary import FailureBoundary
-from app.core.file_writer import safe_write_llm_files, validate_file_output
+from app.core.files import safe_write_llm_files, validate_file_output
 from app.core.step_invariants import StepInvariants, StepInvariantError
 # Phase 7: Validated replacement - simplify logic rather than importing guidance
 
@@ -224,12 +224,12 @@ Generate COMPLETE, WORKING test file now!
                 # log("TESTING", f"✅ Luna generated {written} test file(s)")
                 return True
         
-        # No fallback - report failure, ArborMind decides what to do
+        # No fallback - report failure, orchestrator decides what to do
         log("TESTING", "❌ Luna did not generate test files. Hard failure.")
         return False
         
     except Exception as e:
-        # Report failure - ArborMind decides what to do next
+        # Report failure - orchestrator decides what to do next
         log("TESTING", f"❌ Frontend test generation failed: {e}")
         return False
 
@@ -245,9 +245,6 @@ async def step_testing_frontend(branch) -> StepResult:
     - No internal healing or iterative loops.
     - Failures result in immediate workflow termination.
     """
-    from app.arbormind.cognition.branch import Branch
-    assert isinstance(branch, Branch)
-    
     # Extract context from branch
     project_id = branch.intent["project_id"]
     user_request = branch.intent["user_request"]
@@ -487,7 +484,7 @@ async def step_testing_frontend(branch) -> StepResult:
     test_file = project_path / "frontend/tests/e2e.spec.js"
 
     # ONE SHOT MODE - Direct execution, no attempt logic
-    # ArborMind handles retry/fallback decisions
+    # Orchestrator handles retry/fallback decisions
     # 
     # NOTE: Test file was already generated in _generate_frontend_tests_from_template()
     # No need for a second Luna call here - proceed directly to execution

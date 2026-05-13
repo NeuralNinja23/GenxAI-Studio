@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from app.core.types import ChatMessage, StepResult
-from app.core.step_outcome import StepExecutionResult, StepOutcome
+from app.core.types import StepExecutionResult, StepOutcome
 from app.core.constants import WorkflowStep
 from app.handlers.base import broadcast_status, broadcast_agent_log
 from app.core.logging import log
@@ -26,7 +26,7 @@ from app.utils.entity_discovery import discover_primary_entity, extract_all_mode
 
 # Phase 0: Failure Boundary Enforcement
 from app.core.failure_boundary import FailureBoundary
-from app.core.file_writer import safe_write_llm_files
+from app.core.files import safe_write_llm_files
 from app.core.step_invariants import StepInvariants, StepInvariantError
 
 
@@ -289,7 +289,7 @@ Use the provided schema for REFERENCE ONLY to write valid test payloads.
         return False
         
     except Exception as e:
-        # Report failure - ArborMind decides what to do next
+        # Report failure - orchestrator decides what to do next
         log("TESTING", f"❌ Test generation failed: {e}")
         return False
 
@@ -304,11 +304,8 @@ async def step_testing_backend(branch) -> StepResult:
     - Executes ONCE per attempt.
     - No internal retry loops.
     - No internal self-healing.
-    - If it fails, it reports failure to ArborMind.
+    - If it fails, it reports failure to orchestrator.
     """
-    from app.arbormind.cognition.branch import Branch
-    assert isinstance(branch, Branch)
-    
     # Extract context from branch
     project_id = branch.intent["project_id"]
     user_request = branch.intent["user_request"]
@@ -408,7 +405,7 @@ async def step_testing_backend(branch) -> StepResult:
         log("TESTING", "📊 Phase-1 Policy: Tests are verification signals, not blocking requirements")
         
         # Continue workflow - tests are optional in Phase-1
-        # ArborMind will observe this as a signal
+        # Orchestrator will observe this as a signal
         return StepResult(
             nextstep=WorkflowStep.FRONTEND_INTEGRATION,
             turn=7,

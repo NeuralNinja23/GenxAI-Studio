@@ -17,9 +17,9 @@ from app.orchestration.state import WorkflowStateManager
 from app.supervision import supervised_agent_call
 from app.utils.entity_discovery import EntityPlan
 from app.core.failure_boundary import FailureBoundary
-from app.core.file_writer import validate_file_output, persist_agent_output
+from app.core.files import validate_file_output, persist_agent_output
 from app.core.step_invariants import StepInvariants, StepInvariantError
-from app.core.step_outcome import StepOutcome
+from app.core.types import StepOutcome
 
 @FailureBoundary.enforce
 async def step_backend_routers(branch) -> StepResult:
@@ -30,8 +30,6 @@ async def step_backend_routers(branch) -> StepResult:
     1. Load entity plan and models.py
     2. For each AGGREGATE entity, generate its FastAPI router
     """
-    from app.arbormind.cognition.branch import Branch
-    assert isinstance(branch, Branch)
     
     # Extract context from branch
     project_id = branch.intent["project_id"]

@@ -7,9 +7,8 @@ GenCode Studio Frontend-First workflow:
 4. System Integration (Backend + Frontend) → 5. Testing Backend → 
 6. Testing Frontend → 7. Preview
 
-NEW ARCHITECTURE (Tool Planning Migration):
-- All handlers are now wrapped with ObservedHandler
-- Every handler execution is recorded to ArborMind
+Handler Architecture:
+- All handlers are wrapped with ObservedHandler for logging
 - Enables gradual migration to full tool planning
 """
 from .architecture import step_architecture

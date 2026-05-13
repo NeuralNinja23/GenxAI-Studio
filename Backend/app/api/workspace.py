@@ -271,6 +271,7 @@ async def generate_backend(request: Request, project_id: str, data: GenerateRequ
         project_path.mkdir(parents=True, exist_ok=True)
         
         async def _run_workflow_with_logging():
+            print(f"[DEBUG] _run_workflow_with_logging STARTED for {project_id}")
             try:
                 await run_workflow(
                     project_id=project_id,
@@ -281,9 +282,14 @@ async def generate_backend(request: Request, project_id: str, data: GenerateRequ
                     model=data.model,
                 )
             except Exception as e:
+                print(f"[DEBUG] _run_workflow_with_logging EXCEPTION: {e}")
+                import traceback
+                traceback.print_exc()
                 log("WORKSPACE", f"ERROR {project_id}: {e}")
         
+        print(f"[DEBUG] Creating async task for {project_id}")
         asyncio.create_task(_run_workflow_with_logging())
+
         
         return {
             "success": True,
@@ -299,7 +305,7 @@ async def resume_workflow_endpoint(request: Request, data: ResumeRequest):
     Resume a paused workflow OR start a refine workflow for completed projects.
     
     Delegates to the consolidated engine.resume_workflow which handles:
-    - Resuming paused workflows (ArborMind/FAST V2)
+    - Resuming paused workflows (FAST V2 orchestrator)
     - Starting refine workflows for existing projects (Refine Mode)
     """
     from app.workflow import resume_workflow as engine_resume_workflow

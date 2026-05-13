@@ -5,8 +5,7 @@ Unified Step Invariants - Hard Requirements for Step Success
 These are NON-NEGOTIABLE conditions for a step to be considered successful.
 If any invariant fails, the step MUST fail - no exceptions.
 
-ArborMind correctly exposed these failures by removing masking.
-This module enforces the invariants that were previously bypassed.
+This module enforces invariants that ensure workflow integrity.
 """
 from typing import Dict, List, Any, Optional
 from pathlib import Path

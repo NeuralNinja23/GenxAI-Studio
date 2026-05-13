@@ -93,9 +93,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         log("Main", f"⚠️ Workflow cleanup error (non-fatal): {e}")
     
-    # Initialize ArborMind metrics database
-    # Initialize ArborMind metrics database (Mocked/SQLite)
-    log("Main", "📊 ArborMind metrics database initialized")
+
     
     yield
     

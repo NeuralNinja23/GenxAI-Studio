@@ -95,12 +95,27 @@ STEP_TOKEN_POLICIES = {
         "is_causal": False,
     },
     
+    "backend_testing": {  # Alias for new phase name
+        "max_tokens": 12000,
+        "retry_tokens": None,     # No retry - ArborMind decides
+        "description": "Backend testing with pytest (ArborMind phase)",
+        "is_causal": False,
+    },
+    
     "testing_frontend": {
         "max_tokens": 10000,      # E2E test generation - complete test file with HDAP markers
         "retry_tokens": 12000,    # EVIDENCE: Can retry on infra failure
         "description": "Frontend E2E testing - OBSERVATION ONLY",
         "is_causal": False,
     },
+    
+    "frontend_testing": {  # Alias for new phase name
+        "max_tokens": 12000,
+        "retry_tokens": None,     # No retry - ArborMind decides
+        "description": "Frontend E2E testing (ArborMind phase)",
+        "is_causal": False,
+    },
+
     
     "preview_final": {
         "max_tokens": 4000,       # Final preview summary - INCREASED from 2000

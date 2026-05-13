@@ -33,9 +33,6 @@ async def step_backend_models(branch) -> StepResult:
     Returns:
         StepResult with next step = BACKEND_IMPLEMENTATION (routers)
     """
-    from app.arbormind.cognition.branch import Branch
-    assert isinstance(branch, Branch)
-    
     # Extract context from branch
     project_id = branch.intent["project_id"]
     user_request = branch.intent["user_request"]

@@ -1,11 +1,11 @@
 # app/orchestration/__init__.py
 """
-FAST V2 Engine - ArborMind Execution Body
+FAST V2 Engine - Workflow Orchestration
 
 Key improvements:
 1. Dependency barriers prevent cascade failures
 2. Pre-step validation for critical files
-3. ArborMind handles all cognitive decisions (retry, heal, escalate)
+3. Simple execution routing for decisions
 4. Uses existing handlers (Derek, Luna, Victoria, Marcus)
 5. Post-step validation for critical outputs
 6. Checkpointing after each successful step

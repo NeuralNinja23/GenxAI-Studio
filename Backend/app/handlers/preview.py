@@ -27,9 +27,6 @@ async def step_preview_final(branch) -> StepResult:
     """
     Step 11: Refresh preview on RANDOM free ports for both frontend and backend.
     """
-    from app.arbormind.cognition.branch import Branch
-    assert isinstance(branch, Branch)
-    
     # Extract context from branch
     project_id = branch.intent["project_id"]
     user_request = branch.intent["user_request"]

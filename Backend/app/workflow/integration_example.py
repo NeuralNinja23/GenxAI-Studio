@@ -7,7 +7,7 @@ This shows how workflow engine and orchestrators should use the new types.
 from typing import List
 from pathlib import Path
 
-from app.core.step_outcome import StepOutcome, StepExecutionResult
+from app.core.types import StepOutcome, StepExecutionResult
 from app.workflow.outcome_aggregator import (
     aggregate_workflow_outcome,
     format_degradation_summary

@@ -302,7 +302,7 @@ async def run_sub_agent(
             # FAILURE LEARNING: Deprecated
             # ════════════════════════════════════════════════════════
             # Legacy app.learning integration removed.
-            # ArborMind now handles learning via the global cycle and memory consolidation.
+            # Learning is handled by the orchestrator and memory consolidation.
             pass
 
         return {
@@ -364,11 +364,36 @@ async def marcus_call_sub_agent(
         # ═══════════════════════════════════════════════════════════════
         # PHASE-1: Check ExecutionMode and Apply Enforcement
         # ═══════════════════════════════════════════════════════════════
-        from app.arbormind.core.execution_mode import get_execution_policy, ExecutionMode
-        from app.llm.artifact_enforcement import enforce_artifact_mode
+        # Simple execution policy
+        from enum import Enum
+        from dataclasses import dataclass
         
-        execution_policy = get_execution_policy(step_name)
+        class ExecutionMode(str, Enum):
+            ARTIFACT = "artifact"
+            FREEFORM = "freeform"
+            STRUCTURED = "structured"
+        
+        @dataclass
+        class ExecutionPolicy:
+            mode: ExecutionMode
+            auto_recover: bool = True
+        
+        # Generation steps use ARTIFACT mode
+        GENERATION_STEPS = {
+            "architecture", "backend_models", "backend_routers", 
+            "frontend_mock", "system_integration", "frontend_integration", "refine",
+            "backend_testing", "frontend_testing"  # Testing phases also generate files
+        }
+
+        if step_name.lower() in GENERATION_STEPS:
+            execution_policy = ExecutionPolicy(mode=ExecutionMode.ARTIFACT, auto_recover=True)
+        else:
+            execution_policy = ExecutionPolicy(mode=ExecutionMode.FREEFORM, auto_recover=False)
+        
         is_artifact_mode = (execution_policy.mode == ExecutionMode.ARTIFACT)
+        
+        from app.llm.artifact_enforcement import enforce_artifact_mode
+
         
         # Combine global persona with provided instructions to ensure identity + scope
         global_persona = AGENT_PROMPTS.get(agent_name.lower(), DEREK_PROMPT)
@@ -382,10 +407,20 @@ async def marcus_call_sub_agent(
                 header = f"You are {agent_name.capitalize()}, GenCode Studio's senior full-stack developer.\n\n"
                 global_persona = header + role_persona
         
-        if instructions:
+        if instructions and not is_artifact_mode:
+            # For non-artifact modes, we append instructions to the system prompt (legacy behavior)
             base_prompt = f"{global_persona}\n\n═══════════════════════════════════════════════════════\n📥 STEP-SPECIFIC INSTRUCTIONS (OVERRIDING AUTHORITY)\n═══════════════════════════════════════════════════════\n\n{instructions}"
         else:
             base_prompt = global_persona
+        
+        # Determine the effective task for the user prompt
+        effective_task = user_request
+        if is_artifact_mode and instructions:
+            # In ARTIFACT mode, we combine user_request and instructions into the user prompt
+            # This prevents instructions from overriding the protocol in the system prompt
+            if instructions != user_request:
+                effective_task = f"{user_request}\n\nSPECIFIC INSTRUCTIONS:\n{instructions}"
+
         
         # File Selection - limit to manageable size
         selected_files = files
@@ -431,7 +466,8 @@ async def marcus_call_sub_agent(
             # Use enforcement layer to build prompts correctly
             prompts = enforce_artifact_mode(
                 base_system_prompt=base_prompt,
-                user_task=user_request,
+                user_task=effective_task,
+
                 step_name=step_name,
                 files=selected_files,
                 contracts=contracts

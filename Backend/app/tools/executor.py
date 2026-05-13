@@ -29,12 +29,7 @@ from app.tools.planning import (
 )
 from app.core.logging import log
 
-# TIT: Tool Invocation Trace
-from app.arbormind.observation.tool_trace import (
-    record_tool_invocation,
-    build_tool_event,
-    ARBORMIND_TIT_ENABLED,
-)
+
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -191,22 +186,6 @@ def record_tool_invocation_start(
     This is where observation happens.
     """
     log("TOOL-EXEC", f"▶️ [{invocation.tool_name}] Starting ({invocation.reason})")
-    
-    # Record to ArborMind (if available)
-    try:
-        from app.arbormind.observation.execution_ledger import record_decision_event, get_current_run_id
-        
-        run_id = get_current_run_id()
-        if run_id:
-            record_decision_event(
-                run_id=run_id,
-                step=step,
-                agent=agent,
-                decision="TOOL_INVOKE",
-                reason=f"{invocation.tool_name}: {invocation.reason}",
-            )
-    except Exception:
-        pass  # Observation is best-effort
 
 
 def record_tool_invocation_end(
@@ -218,47 +197,16 @@ def record_tool_invocation_end(
     """
     Record the end of a tool invocation.
     
-    PHASE 3: Records tool trace + step exit + failure event (if applicable)
+    PHASE 3.5: Records tool trace + CLASSIFIED failure event (if applicable)
+    
+    CRITICAL INVARIANT:
+        A failure that does not halt execution is STILL a failure.
+        Only gating decides continuation — not existence.
     """
     status = "✅" if result.success else "❌"
     files_count = len(result.output.get("_written_files", [])) if isinstance(result.output, dict) else 0
     file_info = f", files={files_count}" if files_count > 0 else ""
     log("TOOL-EXEC", f"{status} [{result.tool_name}] {result.duration_ms}ms{file_info}")
-    
-    # Record to ArborMind (if available)
-    try:
-        from app.arbormind.observation.execution_ledger import (
-            record_tool_trace,
-            record_step_exit,
-            record_failure_event,
-            get_current_run_id,
-        )
-        import hashlib
-        
-        run_id = get_current_run_id()
-        if run_id:
-            # TIT: Tool Invocation Trace (CRITICAL for cost/duration attribution)
-            input_hash = hashlib.md5(str(result.invocation_id).encode()).hexdigest()[:8]
-            record_tool_trace(
-                run_id=run_id,
-                step=step,
-                tool_name=result.tool_name,
-                input_hash=input_hash,
-                exit_code=0 if result.success else 1,
-                duration_ms=result.duration_ms,
-            )
-            
-            # If failed, record failure event
-            if not result.success:
-                record_failure_event(
-                    run_id=run_id,
-                    step=step,
-                    origin="TOOL",
-                    signal=result.tool_name,
-                    message=str(result.error or "Unknown error")[:1024],
-                )
-    except Exception:
-        pass  # Observation is best-effort
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -301,42 +249,6 @@ async def execute_tool_plan(
     
     for i, invocation in enumerate(plan.sequence):
         # Start log handled by record_tool_invocation_start()
-        
-        # ═══════════════════════════════════════════════════════════════
-        # PHASE E1: Check lockfile cache for subagentcaller
-        # ═══════════════════════════════════════════════════════════════
-        if invocation.tool_name == "subagentcaller":
-            try:
-                from app.arbormind.core.lockfile import should_skip_generation
-                
-                project_path = invocation.args.get("project_path", "")
-                user_request = invocation.args.get("user_request", "")
-                
-                should_skip, cached = should_skip_generation(
-                    project_path=project_path,
-                    step_name=plan.step,
-                    user_request=user_request,
-                )
-                
-                if should_skip and cached:
-                    # CACHE HIT - skip LLM call entirely!
-                    log("TOOL-EXEC", f"✅ {invocation.tool_name} (CACHED, files={cached.get('files', []).__len__()})")
-                    
-                    result = ToolInvocationResult(
-                        invocation_id=invocation.invocation_id,
-                        tool_name=invocation.tool_name,
-                        success=True,
-                        output={"cached": True, "files": cached.get("files", [])},
-                        error=None,
-                        duration_ms=0,
-                        started_at=datetime.now(timezone.utc).isoformat(),
-                        ended_at=datetime.now(timezone.utc).isoformat(),
-                    )
-                    results.append(result)
-                    final_output = result.output
-                    continue  # Skip to next tool
-            except Exception:
-                pass  # Cache check failed - proceed with normal execution
         
         # Record start
         record_tool_invocation_start(
@@ -400,9 +312,18 @@ async def execute_tool_plan(
             
             if isinstance(output, dict):
                 # Check for explicit failure indicators
+                # Note: subagentcaller uses "passed", most others use "success"
                 if output.get("success") is False:
                     success = False
                     error = output.get("error") or output.get("message") or "Tool returned failure"
+                elif output.get("passed") is False:
+                    # subagentcaller returns passed=False for HDAP/truncation failures
+                    success = False
+                    issues = output.get("issues", [])
+                    if issues and isinstance(issues[0], dict):
+                        error = issues[0].get("description", "Agent returned passed=False")
+                    else:
+                        error = "Agent returned passed=False"
                 elif output.get("error"):
                     success = False
                     error = output.get("error")
@@ -442,23 +363,6 @@ async def execute_tool_plan(
                             started_at=result.started_at,
                             ended_at=result.ended_at,
                         )
-                    
-                    # ═══════════════════════════════════════════════════════
-                    # PHASE E1: Record in lockfile for future cache hits
-                    # ═══════════════════════════════════════════════════════
-                    try:
-                        from app.arbormind.core.lockfile import record_step_completion
-                        project_path = invocation.args.get("project_path", "")
-                        user_request = invocation.args.get("user_request", "")
-                        
-                        record_step_completion(
-                            project_path=project_path,
-                            step_name=plan.step,
-                            user_request=user_request,
-                            files_written=files_written,
-                        )
-                    except Exception:
-                        pass  # Cache recording is non-critical
             
             # Track last successful output
             if success:
@@ -486,32 +390,6 @@ async def execute_tool_plan(
             step=plan.step,
             agent=plan.agent,
         )
-        
-        # ═══════════════════════════════════════════════════════════════
-        # TIT: Tool Invocation Trace (Primary Hook)
-        # ═══════════════════════════════════════════════════════════════
-        if ARBORMIND_TIT_ENABLED:
-            try:
-                from app.arbormind.observation.execution_ledger import get_current_run_id
-                run_id = get_current_run_id() or "unknown"
-                
-                tit_event = build_tool_event(
-                    run_id=run_id,
-                    step=plan.step,
-                    agent=plan.agent,
-                    tool_name=invocation.tool_name,
-                    tool_type="plan_invocation",
-                    invocation_index=i,
-                    called_at=started_at,
-                    duration_ms=result.duration_ms,
-                    status="success" if result.success else "failure",
-                    input_args=invocation.args,
-                    output_result=result.output if result.success else None,
-                    error=Exception(result.error) if result.error else None,
-                )
-                record_tool_invocation(tit_event)
-            except Exception:
-                pass  # TIT must never crash execution
         
         results.append(result)
         

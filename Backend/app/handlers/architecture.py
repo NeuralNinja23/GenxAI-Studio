@@ -16,7 +16,7 @@ from app.core.logging import log
 from app.orchestration.state import WorkflowStateManager
 from app.supervision import supervised_agent_call
 from app.core.failure_boundary import FailureBoundary
-from app.core.file_writer import validate_file_output, persist_agent_output
+from app.core.files import validate_file_output, persist_agent_output
 from app.core.step_invariants import StepInvariants, StepInvariantError
 from app.llm.prompts.victoria import VICTORIA_PROMPT
 
@@ -39,9 +39,6 @@ async def step_architecture(branch) -> StepResult:
     Raises:
         RateLimitError: If rate limited - workflow should stop
     """
-    from app.arbormind.cognition.branch import Branch
-    assert isinstance(branch, Branch)
-    
     # Extract context from branch
     project_id = branch.intent["project_id"]
     user_request = branch.intent["user_request"]
@@ -81,7 +78,7 @@ async def step_architecture(branch) -> StepResult:
         temperature_override = branch.intent.get("temperature_override")
         is_retry = branch.intent.get("is_retry", False)
 
-        # Use supervised call - no retries, ArborMind handles that
+        # Use supervised call - no retries, orchestrator handles that
         result = await supervised_agent_call(
             project_id=project_id,
             manager=manager,

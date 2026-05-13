@@ -104,7 +104,7 @@ class HealthMonitor:
     async def _check_http_health(self, ports: str) -> bool:
         """
         Perform actual HTTP health check to the backend /api/health endpoint.
-        SINGLE ATTEMPT ONLY - ArborMind handles retry decisions.
+        SINGLE ATTEMPT ONLY - orchestrator handles retry decisions.
         
         Args:
             ports: Docker ports string like "0.0.0.0:32783->8001/tcp"

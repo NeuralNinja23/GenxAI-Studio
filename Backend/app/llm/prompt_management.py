@@ -16,9 +16,6 @@ CORE PRINCIPLES (NON‑NEGOTIABLE):
 
 from typing import Any, Dict, List, Optional, Union
 
-print("🔥 LOADED HDAP‑SAFE prompt_management.py FROM:", __file__)
-
-
 # ------------------------------------------------------------------
 # FILE FILTERING (INTERNAL ONLY — NEVER SHOWN AS STRUCTURE TO LLM)
 # ------------------------------------------------------------------

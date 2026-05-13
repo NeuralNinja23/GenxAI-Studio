@@ -42,8 +42,8 @@ The **Backend** is where the magic happens — a sophisticated orchestration sys
 ### ⚡ FAST V2 Orchestrator
 The intelligent workflow engine: **12 atomic steps** with dependency barriers · **Budget tracking** per step · **Checkpointing** for resume · **Cross-step context** sharing
 
-### 🌳 ArborMind Intelligence
-Self-evolving AI routing: **V≠K attention** architecture · **Semantic decision** making · **Pattern learning** from outcomes · **Adaptive strategies**
+### 🧠 Intelligent Orchestration
+Smart workflow execution: **V≠K attention** architecture · **Semantic decision** making · **Adaptive strategies**
 
 ### 🛡️ Evidence-Based Reliability
 Automatic reliability enforcement: **Environment** vs **Cognitive** failure separation · **Selective retries** for infra (evidence steps) · **Quarantine** for logic failures · **One-Shot Policy** for causal steps (no infinite loops)
@@ -100,18 +100,18 @@ The FAST V2 Orchestrator executes a carefully designed sequence of steps:
 
 <br />
 
-## 🌳 ArborMind Intelligence
+## 🧠 Intelligent Orchestration
 
 <div align="center">
 
 <br />
-<sub><i>Neural orchestration engine with attention-based routing and self-evolution</i></sub>
+<sub><i>Smart workflow execution with attention-based routing</i></sub>
 
 </div>
 
 <br />
 
-**ArborMind** powers intelligent decision-making throughout the pipeline:
+The **FAST V2 Orchestrator** powers intelligent decision-making throughout the pipeline:
 
 <table>
 <tr>
@@ -125,7 +125,7 @@ The FAST V2 Orchestrator executes a carefully designed sequence of steps:
 # Key: Option descriptions  
 # Value: Behavior configs
 
-result = await arbormind_route(
+result = await route_decision(
     "Fix React bug",
     tool_options
 )
@@ -135,15 +135,16 @@ result = await arbormind_route(
 </td>
 <td width="33%" align="center">
 
-### 🧬 Evolution Engine
-**Continuous Learning**
+### 📊 Execution Policies
+**Step-Aware Modes**
 
 ```python
-# Learns from every outcome
-EVOLUTION = {
-    "ema_alpha": 0.3,
-    "prompt_mutation": True,
-    "step_reordering": True,
+# Causal steps: One-shot
+# Evidence steps: Retry OK
+POLICY = {
+    "generation": "artifact",
+    "testing": "freeform",
+    "analysis": "structured",
 }
 ```
 
@@ -167,19 +168,6 @@ explorer.inject_patterns(
 </table>
 
 <br />
-
-**Core Files:**
-
-| File | Lines | Purpose |
-|:-----|------:|:--------|
-| `router.py` | 36,831 | V≠K attention-based routing |
-| `evolution.py` | 21,059 | Self-evolving V-vectors |
-| `explorer.py` | 7,818 | Foreign pattern injection |
-| `metrics_collector.py` | 13,993 | Pipeline performance tracking |
-
-<br />
-
----
 
 ---
 
@@ -274,7 +262,7 @@ explorer.inject_patterns(
 │          ┌───────────────────┼───────────────────┐                   │
 │          ▼                   ▼                   ▼                   │
 │   ┌─────────────┐     ┌─────────────┐     ┌─────────────┐           │
-│   │  ArborMind  │     │   Agents    │     │ Supervision │           │
+│   │  Orchestrator│     │   Agents    │     │ Supervision │           │
 │   │  Intelligence│     │ Marcus/Derek│     │   Quality   │           │
 │   └─────────────┘     └─────────────┘     └─────────────┘           │
 │          │                   │                   │                   │
@@ -333,7 +321,7 @@ Backend/
 │   │   ├── backend.py           # Router generation
 │   │   └── testing_*.py         # Test execution
 │   │
-│   ├── 🌳 arbormind/            # Intelligence (7 files)
+│   ├── 🧠 orchestration/        # FAST V2 Intelligence
 │   │   ├── router.py            # Attention routing
 │   │   ├── evolution.py         # Self-evolution
 │   │   └── explorer.py          # Pattern discovery

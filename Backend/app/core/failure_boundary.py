@@ -11,7 +11,7 @@ from typing import Any, Dict, Callable
 from functools import wraps
 import logging
 
-from app.core.step_outcome import StepOutcome, StepExecutionResult
+from app.core.types import StepOutcome, StepExecutionResult
 # Phase 7: Legacy FailureClassifier removed
 # from app.orchestration.failure_classifier import FailureClassifier
 

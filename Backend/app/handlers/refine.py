@@ -16,13 +16,12 @@ from app.core.logging import log
 from app.tools import run_tool
 from app.utils.parser import normalize_llm_output
 from app.orchestration.state import WorkflowStateManager
-# Phase 7: Legacy
-# from app.arbormind import compute_ui_vibe_routing
+
 
 
 # Phase 0: Failure Boundary Enforcement
 from app.core.failure_boundary import FailureBoundary
-from app.core.file_writer import safe_write_llm_files, validate_file_output
+from app.core.files import safe_write_llm_files, validate_file_output
 from app.core.step_invariants import StepInvariants, StepInvariantError
 
 # Constants from legacy
@@ -37,9 +36,6 @@ async def step_refine(branch) -> StepResult:
     Allows the user to modify the existing codebase using natural language.
     Example: "Change the button color to blue" or "Add a phone number field".
     """
-    from app.arbormind.cognition.branch import Branch
-    assert isinstance(branch, Branch)
-    
     # Extract context from branch
     project_id = branch.intent["project_id"]
     user_request = branch.intent["user_request"]

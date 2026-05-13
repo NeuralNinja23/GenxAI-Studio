@@ -115,8 +115,11 @@ class ToolPlanBuilder:
             pre_count += 1
         
         # Add core tool (subagentcaller) - only for GENERATION steps
-        from app.arbormind.core.execution_mode import is_generation_step
-        if is_generation_step(step):
+        GENERATION_STEPS = {
+            "architecture", "backend_models", "backend_routers", 
+            "frontend_mock", "system_integration", "frontend_integration", "refine"
+        }
+        if step.lower() in GENERATION_STEPS:
             subagent = get_tool("subagentcaller")
             if subagent:
                 args = self._build_tool_args("subagentcaller", step, branch, goal, override_args)

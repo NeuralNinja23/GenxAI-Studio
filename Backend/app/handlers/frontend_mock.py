@@ -24,7 +24,7 @@ from app.orchestration.utils import pluralize
 from app.utils.entity_discovery import discover_primary_entity, discover_all_entities
 # Phase 7: Validated replacement - simplify logic rather than importing guidance
 from app.utils.component_copier import copy_used_components
-from app.core.file_writer import validate_file_output, persist_agent_output
+from app.core.files import validate_file_output, persist_agent_output
 from app.core.step_invariants import StepInvariants, StepInvariantError
 
 
@@ -49,9 +49,6 @@ async def step_frontend_mock(branch) -> StepResult:
     This creates the immediate "aha moment" for users - they see a working
     UI before any backend is built. All data is mocked in mock.js.
     """
-    from app.arbormind.cognition.branch import Branch
-    assert isinstance(branch, Branch)
-    
     # Extract context from branch
     project_id = branch.intent["project_id"]
     user_request = branch.intent["user_request"]
@@ -158,7 +155,7 @@ async def step_frontend_mock(branch) -> StepResult:
     If you write a backend file, your output will be discarded and the run will fail.
     """
     
-    # Pre-training patterns (Empty for now - will come from ArborMind learning later)
+    # Pre-training patterns (Empty for now)
     pattern_hints = ""
     
     # log("FRONTEND_MOCK", f"🎨 Generating UI for archetype: {detected_archetype}")
@@ -198,7 +195,7 @@ If you generate ANY backend file, output is INVALID.
     temperature_override = branch.intent.get("temperature_override")
     is_retry = branch.intent.get("is_retry", False)
 
-    # Use supervised call - no retries, ArborMind handles that
+    # Use supervised call - no retries, orchestrator handles that
     result = await supervised_agent_call(
         project_id=project_id,
         manager=manager,

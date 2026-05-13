@@ -1,11 +1,115 @@
 # app/core/types.py
 """
 Shared type definitions used across the application.
+
+CONSOLIDATED from:
+- types.py (original)
+- step_outcome.py (merged 2025-12-29)
+- guard.py (merged 2025-12-29)
 """
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Literal, Optional, TypedDict
 from enum import Enum
+from pathlib import Path
+from pathlib import Path
 
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ORCHESTRATION GUARD (from guard.py)
+# ═══════════════════════════════════════════════════════════════════════════
+
+class OrchestrationGuard:
+    """
+    Safety lock to prevent accidental re-introduction of cognitive decisions
+    (retries, escalation, healing) into the orchestration layer.
+    
+    COGNITIVE LOGIC BELONGS IN ARBORMIND GOVERNOR ONLY.
+    """
+    def __getattr__(self, name):
+        raise RuntimeError(
+            f"Orchestration attempted cognitive decision: {name}. "
+            "COGNITIVE LOGIC BELONGS IN ORCHESTRATOR ONLY."
+        )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STEP OUTCOMES (from step_outcome.py)
+# ═══════════════════════════════════════════════════════════════════════════
+
+class StepOutcome(Enum):
+    """Step-level outcomes (4 types only)."""
+    SUCCESS = "success"
+    HARD_FAILURE = "hard_failure"           # Logical impossibility (GLOBAL)
+    COGNITIVE_FAILURE = "cognitive_failure" # Agent mistake (healable)
+    ENVIRONMENT_FAILURE = "environment_failure" # Platform constraint
+
+
+@dataclass
+class StepExecutionResult:
+    """Result of a single step execution."""
+    outcome: StepOutcome
+    step_name: str = ""
+    isolated: bool = False  # True if quarantined (dead branch)
+    artifacts: List[Path] = field(default_factory=list)
+    data: Dict[str, Any] = field(default_factory=dict)
+    error_details: Optional[str] = None
+    tool_used: Optional[str] = None
+    
+    def is_successful(self) -> bool:
+        """Only SUCCESS counts as success."""
+        return self.outcome == StepOutcome.SUCCESS
+    
+    def requires_healing(self) -> bool:
+        """Only COGNITIVE_FAILURE triggers healing."""
+        return self.outcome == StepOutcome.COGNITIVE_FAILURE
+    
+    def is_dead_branch(self) -> bool:
+        """Isolated steps are dead branches."""
+        return self.isolated
+    
+    def is_hard_failure(self) -> bool:
+        """HARD_FAILURE is a global truth (ignores isolation)."""
+        return self.outcome == StepOutcome.HARD_FAILURE
+
+
+@dataclass
+class StepExecutionRecord:
+    """
+    Record of what a step produced during execution.
+    
+    Used for:
+    - Rollback (delete files created by failed step)
+    - Resume (know what each step created)
+    - Debugging (audit trail)
+    """
+    step_name: str
+    files_created: List[str] = field(default_factory=list)
+    timestamp: str = field(default_factory=lambda: __import__('datetime').datetime.utcnow().isoformat())
+    attempt_number: int = 1  # 1 = first attempt, 2 = retry
+    
+    def to_dict(self) -> dict:
+        """Serialize for checkpoint persistence."""
+        return {
+            "step_name": self.step_name,
+            "files_created": self.files_created,
+            "timestamp": self.timestamp,
+            "attempt_number": self.attempt_number
+        }
+    
+    @classmethod
+    def from_dict(cls, data: dict) -> "StepExecutionRecord":
+        """Deserialize from checkpoint."""
+        return cls(
+            step_name=data.get("step_name", ""),
+            files_created=data.get("files_created", []),
+            timestamp=data.get("timestamp", ""),
+            attempt_number=data.get("attempt_number", 1)
+        )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ORIGINAL TYPES.PY CONTENT
+# ═══════════════════════════════════════════════════════════════════════════
 
 # TypedDict for chat messages
 class ChatMessage(TypedDict):

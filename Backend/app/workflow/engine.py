@@ -25,14 +25,20 @@ async def run_workflow(
     model: Optional[str] = None,
 ) -> None:
     """
-    Start a new workflow for a project using FASTOrchestratorV2.
+    Start a new workflow for a project using ArborMind.
     """
+    # DEBUG: Immediate logging to verify function is called
+    print(f"[DEBUG] run_workflow CALLED for {project_id}")
+    log("WORKFLOW", f"▶️ run_workflow called for {project_id}")
+    
     # ===== GUARD: Atomically check and mark as running =====
     can_start = await WorkflowStateManager.try_start_workflow(project_id)
     if not can_start:
         log("WORKFLOW", f"⚠️ Workflow already running for {project_id}, ignoring duplicate request", project_id=project_id)
         return
     
+    log("WORKFLOW", f"✅ Workflow guard passed, starting for {project_id}")
+
     # Create project directory (Atomic scaffolding)
     final_project_path = workspaces_path / project_id
     
@@ -163,8 +169,10 @@ VITE_API_URL=http://localhost:8001/api
         await WorkflowStateManager.stop_workflow(project_id)
         return
 
-    # Start Engine
-    engine = FASTOrchestratorV2(
+    # Start ArborMind cognitive loop
+    from app.orchestration.fast_orchestrator import run_arbormind_workflow
+    
+    await run_arbormind_workflow(
         project_id=project_id,
         manager=manager,
         project_path=project_path,
@@ -172,8 +180,6 @@ VITE_API_URL=http://localhost:8001/api
         provider=provider,
         model=model,
     )
-    
-    await engine.run()
 
 
 async def autonomous_agent_workflow(
@@ -229,23 +235,18 @@ async def resume_workflow(
         log("WORKFLOW", f"⚠️ Workflow already running for {project_id}, ignoring")
         return
 
-    # Start engine
-    # If refining, is_refinement=True
-    # If resuming normal workflow, resume_from_checkpoint=True (unless it was paused at start?)
-    # Note: resume_from_checkpoint loads completed steps from disk.
+    # Start ArborMind cognitive loop
+    from app.orchestration.fast_orchestrator import run_arbormind_workflow
     
-    engine = FASTOrchestratorV2(
+    await run_arbormind_workflow(
         project_id=project_id,
         manager=manager,
         project_path=project_path,
         user_request=user_message,
         provider=provider,
         model=model,
-        resume_from_checkpoint=not is_refinement, 
-        is_refinement=is_refinement,
     )
-    
-    await engine.run()
+
 
 
 async def resume_from_checkpoint_workflow(
@@ -276,17 +277,17 @@ async def resume_from_checkpoint_workflow(
         log("WORKFLOW", f"⚠️ Workflow already running for {project_id}")
         return False
     
-    log("WORKFLOW", f"🔄 Resuming FAST V2 workflow for {project_id} from checkpoint")
+    log("WORKFLOW", f"🔄 Resuming workflow for {project_id}")
     
-    engine = FASTOrchestratorV2(
+    # Start ArborMind cognitive loop
+    from app.orchestration.fast_orchestrator import run_arbormind_workflow
+    
+    await run_arbormind_workflow(
         project_id=project_id,
         manager=manager,
         project_path=project_path,
         user_request=description,
         provider=provider,
         model=model,
-        resume_from_checkpoint=True,
     )
-    
-    await engine.run()
     return True

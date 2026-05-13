@@ -22,9 +22,6 @@ async def step_system_integration(branch) -> StepResult:
     - Frontend: Generate API helpers and replace mock→API
     - Cross-system: Ensure consistent configuration
     """
-    from app.arbormind.cognition.branch import Branch
-    assert isinstance(branch, Branch)
-    
     # Extract context from branch
     project_id = branch.intent["project_id"]
     manager = branch.intent["manager"]
