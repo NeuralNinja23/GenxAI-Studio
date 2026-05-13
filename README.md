@@ -54,17 +54,11 @@ Smart frontend generation: **6 UI vibes** (Dark, Minimal, Glass...) · **Archety
 
 ## 🤖 Meet the AI Team
 
-<div align="center">
 
-<img src="docs/images/agents_showcase.png" alt="AI Agents" width="800" />
-
-</div>
-
-<br />
 
 <table>
 <tr>
-<td align="center" width="25%">
+<td align="center" width="20%">
 
 ### 🔵 Marcus
 **Senior Architect**
@@ -74,7 +68,7 @@ Smart frontend generation: **6 UI vibes** (Dark, Minimal, Glass...) · **Archety
 Code review, quality gates, final approval. Ensures every line meets production standards.
 
 </td>
-<td align="center" width="25%">
+<td align="center" width="20%">
 
 ### 🟣 Victoria
 **System Architect**
@@ -84,7 +78,7 @@ Code review, quality gates, final approval. Ensures every line meets production 
 Designs system architecture, API contracts, and database schemas from requirements.
 
 </td>
-<td align="center" width="25%">
+<td align="center" width="20%">
 
 ### 🟢 Derek
 **Full-Stack Developer**
@@ -94,7 +88,7 @@ Designs system architecture, API contracts, and database schemas from requiremen
 Implements React frontends, FastAPI backends, and integrates everything seamlessly.
 
 </td>
-<td align="center" width="25%">
+<td align="center" width="20%">
 
 ### 🟡 Luna
 **QA Engineer**
@@ -102,6 +96,16 @@ Implements React frontends, FastAPI backends, and integrates everything seamless
 *The Guardian*
 
 Writes and runs Playwright E2E tests, catches bugs before deployment.
+
+</td>
+<td align="center" width="20%">
+
+### 🟠 Reggie
+**Deployment Agent**
+
+*The Shipper*
+
+Handles environment setup, builds, and one-click deployment pipelines (Planned).
 
 </td>
 </tr>
@@ -115,16 +119,7 @@ Writes and runs Playwright E2E tests, catches bugs before deployment.
 
 ## ⚡ The FAST V2 Pipeline
 
-<div align="center">
 
-<img src="docs/images/workflow_pipeline.png" alt="Workflow Pipeline" width="900" />
-
-<br />
-<sub><i>4-Phase Linear Pipeline — One-Shot execution with strict separation of Causal and Evidence steps</i></sub>
-
-</div>
-
-<br />
 
 | Phase | Steps | What Happens |
 |:------|:------|:-------------|
@@ -143,37 +138,25 @@ Writes and runs Playwright E2E tests, catches bugs before deployment.
 
 ## 🌳 ArborMind — Neural Orchestration
 
-<div align="center">
-
-<img src="docs/images/arbormind_architecture.png" alt="ArborMind Architecture" width="800" />
-
-<br />
-<sub><i>ArborMind One-Shot Pipeline — Linear causal chain with evidence-based observation branches</i></sub>
-
-</div>
-
 <br />
 
-**ArborMind (AM)** is our next-generation orchestration engine featuring:
+## 🌳 ArborMind — The Orchestration Engine
 
-### 🧠 Attention Router — V≠K Architecture
-Unlike traditional RAG where V=K, ArborMind uses separate Key and Value vectors for semantic routing that synthesizes weighted configurations.
+**ArborMind** is the foundational orchestration infrastructure that powers GenCode Studio. While GenCode Studio provides the specialized agents (Marcus, Victoria, Derek, Luna, Reggie) and the software generation context, ArborMind is the engine that dynamically coordinates them.
 
-```python
-# Smart routing example
-result = await arbormind_route("Fix React component bug", tool_options)
-# → {mode: "strict", max_edits: 2}
-```
+It manages execution order, resolves dependencies, and schedules the agents across the entire pipeline.
 
-### ⚡ Hybrid Workflow — Flexible Execution
-Intelligently combines sequential and parallel execution. Steps run in parallel when independent, sequentially when dependent.
+### 🧠 Transformer-Inspired Heuristic Router
+ArborMind implements a transformer-inspired heuristic routing system that separates intent matching from strategy scoring, enabling weighted heuristic-based strategy selection rather than simply retrieving the nearest match.
 
-### 🧬 Self Evolution — Continuous Learning
-Learns from every success and failure using EMA-adjusted V-vectors. Gets smarter with every generation.
+### ⛔ Causal / Evidence Execution (State Gate)
+Execution splits into two classes: causal steps (irreversible) and evidence branches (verifiable). Failed states are fingerprinted and permanently blocked from re-execution — preventing the system from getting stuck in retry cascades during long-horizon workflows.
 
-```python
-EVOLUTION = {"prompt_mutation": True, "step_reordering": True, "ema_alpha": 0.3}
-```
+### ⚡ Parallel Pipeline Execution (Planned)
+Future versions are designed to execute independent workflow phases concurrently where dependencies allow, reducing end-to-end generation time without compromising correctness.
+
+### 🧬 EMA-Based Adaptive Routing (Planned)
+Designed to support Exponential Moving Average (EMA) adaptive routing, ArborMind will eventually learn from workflow outcomes to optimize strategy selection across projects without human feedback.
 
 <br />
 
