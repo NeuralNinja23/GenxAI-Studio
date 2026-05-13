@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/images/hero_banner.png" alt="GenCode Studio" width="100%" />
+<img src="docs/images/GenCode Studio.png" alt="GenCode Studio" width="100%" />
 
 <br />
 
