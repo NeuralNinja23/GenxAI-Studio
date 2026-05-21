@@ -33,7 +33,7 @@ async def connect_db():
         
         # Test connection - this will fail fast if MongoDB is not running
         await _client.admin.command("ping")
-        print("✅ [DB] Connected to MongoDB")
+        print("[SUCCESS] [DB] Connected to MongoDB")
         
         # Initialize Beanie
         from beanie import init_beanie
@@ -45,13 +45,13 @@ async def connect_db():
             database=_db,
             document_models=[Project, WorkflowStepRecord, Snapshot, Deployment, WorkflowSession]
         )
-        print("✅ [DB] Beanie ODM Initialized")
+        print("[SUCCESS] [DB] Beanie ODM Initialized")
         _connection_error = None
     except Exception as e:
         error_msg = str(e)
-        print(f"⚠️ [DB] MongoDB not available: {error_msg}")
-        print("   ℹ️ The system will continue but database features will be disabled.")
-        print(f"   ℹ️ To enable MongoDB, ensure it's running on {os.getenv('MONGODB_URL', 'mongodb://localhost:27017')}")
+        print(f"[WARNING] [DB] MongoDB not available: {error_msg}")
+        print("   [INFO] The system will continue but database features will be disabled.")
+        print(f"   [INFO] To enable MongoDB, ensure it's running on {os.getenv('MONGODB_URL', 'mongodb://localhost:27017')}")
         _client = None
         _db = None
         _connection_error = error_msg
@@ -94,6 +94,6 @@ def get_collection(name: str):
     """
     if _db is None:
         if _connection_error:
-            print(f"⚠️ [DB] Cannot get collection '{name}': {_connection_error}")
+            print(f"[WARNING] [DB] Cannot get collection '{name}': {_connection_error}")
         return None
     return _db[name]
