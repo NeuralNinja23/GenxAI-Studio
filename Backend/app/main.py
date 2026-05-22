@@ -1,6 +1,6 @@
 # app/main.py
 """
-GenCode Studio Backend - Clean Architecture
+GenxAI Studio Backend - Clean Architecture
 """
 import os
 import uvicorn
@@ -46,7 +46,8 @@ os.environ["WATCHFILES_IGNORE_PATHS"] = "workspaces"
 
 # Print environment status
 log("Main", "🔑 Environment check:", data={
-    "GEMINI_API_KEY loaded": bool(settings.llm.gemini_api_key),
+    "Vertex AI project": settings.llm.vertex_project_id or "auto-discover from ADC",
+    "Vertex AI region":  settings.llm.vertex_region,
     "OPENAI_API_KEY loaded": bool(settings.llm.openai_api_key),
     "Default provider": settings.llm.default_provider,
     "Default model": settings.llm.default_model
@@ -63,7 +64,7 @@ manager = ConnectionManager()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application startup and shutdown."""
-    log("Main", "🚀 GenCode Studio starting...")
+    log("Main", "🚀 GenxAI Studio starting...")
     
     # Ensure workspaces directory exists
     settings.paths.workspaces_dir.mkdir(parents=True, exist_ok=True)
@@ -107,8 +108,11 @@ async def lifespan(app: FastAPI):
 # APP INITIALIZATION
 # ---------------------------------------------------------------------------
 
+from app.core.preflight.kernel import PreflightKernel
+PreflightKernel.boot()
+
 app = FastAPI(
-    title="GenCode Studio",
+    title="GenxAI Studio",
     version="2.0.0",
     lifespan=lifespan,
 )

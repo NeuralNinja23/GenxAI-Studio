@@ -3,7 +3,7 @@
 <br />
 <br />
 
-# 🧠 GenCode Studio — Backend
+# 🧠 GenxAI Studio — Backend
 
 ### **The AI Engine That Powers Intelligent Code Generation**
 
@@ -592,7 +592,7 @@ SENTRY_DSN=your_sentry_dsn_here
 
 <div align="center">
 
-### Part of [GenCode Studio](../README.md)
+### Part of [GenxAI Studio](../README.md)
 
 **⚙️ Powered by FastAPI · MongoDB · Google Gemini · 🌳 ArborMind**
 

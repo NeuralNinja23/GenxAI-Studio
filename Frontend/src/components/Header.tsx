@@ -24,7 +24,7 @@ const Header: React.FC = () => {
             <NavLink
               to="/"
               className="group flex items-center gap-3 focus:outline-none focus:ring-2 focus:ring-purple-500/40 rounded-lg"
-              aria-label="GenCode Studio Home"
+              aria-label="GenxAI Studio Home"
             >
               <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 via-violet-500 to-indigo-600 shadow-lg shadow-purple-500/25 transition-all duration-300 group-hover:shadow-purple-500/40 group-hover:scale-105 group-focus:scale-105">
                 <SparklesIcon className="h-5 w-5 text-white" aria-hidden="true" />

@@ -2,7 +2,7 @@
 
 from .governor import CognitiveGovernor, GovernanceVerdict
 from .attention import AttentionRouter, AttentionState
-from .convergence import ConvergenceEngine, ConvergenceResult
+from .convergence import ConvergenceKernel, ConvergenceResult
 from .mutation import MutationEngine, MutationRequest, MutationResult
 from .validity import ValidityEvaluator, ValidityResult
 from .circularity_monitor import CircularityMonitor

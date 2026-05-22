@@ -104,7 +104,7 @@ const App: React.FC = () => {
                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 animate-pulse" />
                     <div className="absolute inset-0 w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 blur-lg opacity-50 animate-pulse" />
                   </div>
-                  <p className="text-sm text-zinc-500 animate-pulse">Initializing GenCode Studio...</p>
+                  <p className="text-sm text-zinc-500 animate-pulse">Initializing GenxAI Studio...</p>
                 </div>
               </div>
             ) : (

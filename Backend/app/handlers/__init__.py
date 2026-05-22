@@ -2,7 +2,7 @@
 """
 Workflow step handlers - one function per workflow step.
 
-GenCode Studio Frontend-First workflow:
+GenxAI Studio Frontend-First workflow:
 1. Architecture → 2. Frontend (Mock) → 3. Backend Implementation (Atomic) → 
 4. System Integration (Backend + Frontend) → 5. Testing Backend → 
 6. Testing Frontend → 7. Preview

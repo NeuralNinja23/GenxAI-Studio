@@ -1,6 +1,6 @@
 # app/utils/__init__.py
 """
-Utility modules for GenCode Studio.
+Utility modules for GenxAI Studio.
 """
 from .parser import (
     normalize_llm_output,

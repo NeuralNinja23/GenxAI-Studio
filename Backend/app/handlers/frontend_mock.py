@@ -3,7 +3,7 @@
 Step 2: Derek creates frontend with MOCK DATA first.
 
 
-This follows the GenCode Studio pattern:
+This follows the GenxAI Studio pattern:
 - Create frontend-first with mock data for immediate "aha moment"
 - All mock data goes in src/data/mock.js
 - Components are functional but use local state
@@ -163,7 +163,7 @@ async def step_frontend_mock(branch) -> StepResult:
     # Extract app title from user request
     app_title = user_request.split(".")[0][:50] if "." in user_request else user_request[:50]
 
-    # FRONTEND-FIRST MOCK PROMPT (GenCode Studio Pattern) - CUSTOMIZATION FOCUSED
+    # FRONTEND-FIRST MOCK PROMPT (GenxAI Studio Pattern) - CUSTOMIZATION FOCUSED
     frontend_mock_instructions = f"""
 YOU ARE EXECUTING STEP: FRONTEND_MOCK
 

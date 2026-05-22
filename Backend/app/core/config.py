@@ -15,8 +15,17 @@ load_dotenv()
 class LLMSettings:
     """LLM provider configuration."""
     default_provider: str = field(default_factory=lambda: os.getenv("DEFAULT_LLM_PROVIDER", "gemini"))
-    default_model: str = field(default_factory=lambda: os.getenv("DEFAULT_LLM_MODEL", "gemini-2.0-flash-exp"))
+    default_model: str = field(default_factory=lambda: os.getenv("DEFAULT_LLM_MODEL", "gemini-2.0-flash-001"))
+    # DEPRECATED: gemini_api_key is no longer used by the Gemini provider.
+    # Authentication is now handled via Application Default Credentials (ADC).
+    # This field is kept so existing .env files don't cause errors on startup.
     gemini_api_key: Optional[str] = field(default_factory=lambda: os.getenv("GEMINI_API_KEY"))
+    # --- Vertex AI (ADC) ---
+    # GCP project ID. If None, auto-discovered from ADC (gcloud auth application-default login).
+    vertex_project_id: Optional[str] = field(default_factory=lambda: os.getenv("VERTEX_PROJECT_ID"))
+    # Vertex AI region. Must match a region where Gemini is available.
+    vertex_region: str = field(default_factory=lambda: os.getenv("VERTEX_REGION", "us-central1"))
+    # --- Other providers ---
     openai_api_key: Optional[str] = field(default_factory=lambda: os.getenv("OPENAI_API_KEY"))
     anthropic_api_key: Optional[str] = field(default_factory=lambda: os.getenv("ANTHROPIC_API_KEY"))
     ollama_base_url: str = field(default_factory=lambda: os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"))

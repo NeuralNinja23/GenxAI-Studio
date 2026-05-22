@@ -404,7 +404,7 @@ async def marcus_call_sub_agent(
             marker = "📐 ROLE & RESPONSIBILITY"
             if marker in global_persona:
                 role_persona = global_persona[global_persona.find(marker):]
-                header = f"You are {agent_name.capitalize()}, GenCode Studio's senior full-stack developer.\n\n"
+                header = f"You are {agent_name.capitalize()}, GenxAI Studio's senior full-stack developer.\n\n"
                 global_persona = header + role_persona
         
         if instructions and not is_artifact_mode:

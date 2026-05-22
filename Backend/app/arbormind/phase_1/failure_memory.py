@@ -23,6 +23,7 @@ class FailureMemoryEntry:
     """Immutable record of a single failure observation."""
     entry_id: str
     fingerprint_id: str
+    semantic_signature: str
     severity: FailureSeverity
     reason: str
     context: Dict
@@ -57,6 +58,7 @@ class FailureMemory:
     def record(
         self,
         fingerprint_id: str,
+        semantic_signature: str,
         severity: FailureSeverity,
         reason: str,
         context: Optional[Dict] = None,
@@ -80,6 +82,7 @@ class FailureMemory:
         entry = FailureMemoryEntry(
             entry_id=str(uuid.uuid4()),
             fingerprint_id=fingerprint_id,
+            semantic_signature=semantic_signature,
             severity=severity,
             reason=reason,
             context=context,

@@ -22,12 +22,12 @@ async def list_providers():
     """List available LLM providers."""
     providers = []
     
-    if settings.llm.gemini_api_key:
-        providers.append(ProviderInfo(
-            name="gemini",
-            available=True,
-            models=["gemini-2.0-flash-exp", "gemini-1.5-pro", "gemini-1.5-flash"],
-        ))
+    # Gemini uses ADC — always available when gcloud is configured (no API key needed)
+    providers.append(ProviderInfo(
+        name="gemini",
+        available=True,
+        models=["gemini-2.0-flash-001", "gemini-1.5-pro-002", "gemini-1.5-flash-002", "gemini-2.5-pro-preview-05-06"],
+    ))
     
     if settings.llm.openai_api_key:
         providers.append(ProviderInfo(
@@ -55,14 +55,15 @@ async def get_available_providers():
     """Get list of available providers (those with API keys configured)."""
     available = []
     
-    if settings.llm.gemini_api_key:
-        available.append({
-            "id": "gemini",
-            "name": "Google Gemini",
-            "models": ["gemini-2.0-flash", "gemini-2.0-flash-exp", "gemini-1.5-pro", "gemini-1.5-flash"],
-            "requiresApiKey": True,
-            "costPer1kTokens": 0.0,
-        })
+    # Gemini uses ADC — always available when gcloud is configured (no API key needed)
+    available.append({
+        "id": "gemini",
+        "name": "Google Gemini (Vertex AI)",
+        "models": ["gemini-2.0-flash-001", "gemini-1.5-pro-002", "gemini-1.5-flash-002", "gemini-2.5-pro-preview-05-06", "gemini-2.5-flash-preview-04-17"],
+        "requiresApiKey": False,
+        "authMethod": "ADC",
+        "costPer1kTokens": 0.0,
+    })
     
     if settings.llm.openai_api_key:
         available.append({

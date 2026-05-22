@@ -1,4 +1,4 @@
-// Stubs to mirror GenCode Studio testing agent hooks (frontend side)
+// Stubs to mirror GenxAI Studio testing agent hooks (frontend side)
 export type QAIssue = { file: string; line?: number; severity: 'low'|'medium'|'high'; description: string; suggested_fix?: string };
 export type TestReport = { passed: boolean; summary: string; issues: QAIssue[] };
 

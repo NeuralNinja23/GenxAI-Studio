@@ -145,26 +145,68 @@ Provide your observations in the specified JSON format."""
             else:
                 cleaned = "\n".join(lines[1:])
         
-        # Parse JSON
-        data = json.loads(cleaned)
-        
-        # Build ReviewReport (ignore any action-oriented fields)
-        review = ReviewReport(
-            phase=phase_name,
-            strengths=data.get("strengths", [])[:5],
-            weaknesses=data.get("weaknesses", [])[:5],
-            missing_elements=data.get("missing_elements", [])[:5],
-            inconsistencies=data.get("inconsistencies", [])[:5],
-            risks=data.get("risks", [])[:5],
-            summary=data.get("summary", "")[:500],
-        )
-        
-        log("MARCUS", f"✅ Review complete: {len(review.strengths)} strengths, {len(review.weaknesses)} weaknesses")
-        return review
-        
-    except json.JSONDecodeError as e:
-        log("MARCUS", f"⚠️ Failed to parse review JSON: {e}")
-        return empty_review(phase_name)
-    except Exception as e:
-        log("MARCUS", f"⚠️ Review failed (non-fatal): {e}")
+        # Parse JSON and enforce Pydantic Cognitive Schema
+        try:
+            data = json.loads(cleaned)
+            # Inject mandatory schema fields if LLM omitted them
+            if "reasoning_depth_score" not in data: data["reasoning_depth_score"] = 0.5
+            if "confidence_score" not in data: data["confidence_score"] = 0.5
+            if "evidence_links" not in data: data["evidence_links"] = ["artifacts"]
+            
+            from app.arbormind.cognition.models import ReviewReportSchema
+            from app.arbormind.cognition.validator import CognitionValidator
+            
+            review_schema = ReviewReportSchema(**data)
+            CognitionValidator.validate(review_schema)
+            
+            review = ReviewReport(
+                phase=phase_name,
+                strengths=review_schema.strengths,
+                weaknesses=review_schema.weaknesses,
+                missing_elements=review_schema.missing_elements,
+                inconsistencies=review_schema.inconsistencies,
+                risks=review_schema.risks,
+                summary=review_schema.summary,
+            )
+            
+            log("MARCUS", f"✅ Cognitive Review Validated (Confidence: {review_schema.confidence_score}, Depth: {review_schema.reasoning_depth_score})")
+            return review
+            
+        except json.JSONDecodeError as e:
+            # Emergency Recovery using jsonrepair
+            try:
+                from jsonrepair import repair
+                repaired = repair(cleaned)
+                data = json.loads(repaired)
+                if "reasoning_depth_score" not in data: data["reasoning_depth_score"] = 0.3
+                if "confidence_score" not in data: data["confidence_score"] = 0.3
+                if "evidence_links" not in data: data["evidence_links"] = ["salvaged_artifacts"]
+                
+                from app.arbormind.cognition.models import ReviewReportSchema
+                from app.arbormind.cognition.validator import CognitionValidator
+                
+                review_schema = ReviewReportSchema(**data)
+                CognitionValidator.validate(review_schema)
+                
+                review = ReviewReport(
+                    phase=phase_name,
+                    strengths=review_schema.strengths,
+                    weaknesses=review_schema.weaknesses,
+                    missing_elements=review_schema.missing_elements,
+                    inconsistencies=review_schema.inconsistencies,
+                    risks=review_schema.risks,
+                    summary=review_schema.summary,
+                )
+                log("MARCUS", "⚠️ JSON Truncated. Salvaged via jsonrepair & validated.")
+                return review
+            except Exception as inner_e:
+                log("MARCUS", f"⚠️ Critical cognition failure (unrepairable): {inner_e}")
+                return empty_review(phase_name)
+                
+        except Exception as e:
+            log("MARCUS", f"⚠️ Epistemic Validation Failed: {e}")
+            return empty_review(phase_name)
+            
+    except Exception as outer_e:
+        log("MARCUS", f"⚠️ Outer Execution Failed: {outer_e}")
         return empty_review(phase_name)

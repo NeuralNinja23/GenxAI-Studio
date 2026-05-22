@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/images/GenCode Studio.png" alt="GenCode Studio" width="100%" />
+<img src="docs/images/GenxAI Studio.png" alt="GenxAI Studio" width="100%" />
 
 <br />
 
@@ -12,7 +12,7 @@
 
 <br />
 
-**GenCode Studio** is an AI-powered code generation platform that transforms natural language descriptions into complete, tested, production-ready full-stack applications.
+**GenxAI Studio** is an AI-powered code generation platform that transforms natural language descriptions into complete, tested, production-ready full-stack applications.
 
 <br />
 
@@ -142,7 +142,7 @@ Handles environment setup, builds, and one-click deployment pipelines (Planned).
 
 ## 🌳 ArborMind — The Orchestration Engine
 
-**ArborMind** is the foundational orchestration infrastructure that powers GenCode Studio. While GenCode Studio provides the specialized agents (Marcus, Victoria, Derek, Luna, Reggie) and the software generation context, ArborMind is the engine that dynamically coordinates them.
+**ArborMind** is the foundational orchestration infrastructure that powers GenxAI Studio. While GenxAI Studio provides the specialized agents (Marcus, Victoria, Derek, Luna, Reggie) and the software generation context, ArborMind is the engine that dynamically coordinates them.
 
 It manages execution order, resolves dependencies, and schedules the agents across the entire pipeline.
 
@@ -331,7 +331,7 @@ ws.onmessage = (event) => {
 
 ## 🎨 UI Archetypes & Vibes
 
-GenCode Studio intelligently detects your app type and applies matching aesthetics:
+GenxAI Studio intelligently detects your app type and applies matching aesthetics:
 
 **Archetypes:** `admin_dashboard` • `ecommerce_store` • `saas_app` • `realtime_collab` • `portfolio_site` • `developer_tools`
 
@@ -377,11 +377,11 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 <br />
 
-**⭐ Star this repo if GenCode Studio helps you build faster!**
+**⭐ Star this repo if GenxAI Studio helps you build faster!**
 
 <br />
 
-<sub>GenCode Studio — From idea to production in minutes, not months.</sub>
+<sub>GenxAI Studio — From idea to production in minutes, not months.</sub>
 
 <br />
 <br />

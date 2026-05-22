@@ -1,6 +1,6 @@
 # app/workflow/__init__.py
 """
-Workflow module - Orchestrates the GenCode Studio workflow engine.
+Workflow module - Orchestrates the GenxAI Studio workflow engine.
 
 Note: Imports are done lazily to avoid circular dependencies with app.handlers.
 """

@@ -34,7 +34,7 @@ async def step_architecture(branch) -> StepResult:
     - Data flow diagrams
     
     Returns:
-        StepResult with next step = FRONTEND_MOCK (GenCode Studio pattern: frontend-first)
+        StepResult with next step = FRONTEND_MOCK (GenxAI Studio pattern: frontend-first)
   
     Raises:
         RateLimitError: If rate limited - workflow should stop

@@ -3,10 +3,10 @@
 Application constants - all magic numbers and strings in one place.
 """
 
-# Workflow Steps - GenCode Studio workflow (Frontend-First)
+# Workflow Steps - GenxAI Studio workflow (Frontend-First)
 class WorkflowStep:
     """
-    GenCode Studio workflow steps (Frontend-First pattern).
+    GenxAI Studio workflow steps (Frontend-First pattern).
     
     Order (9 steps total - Atomic Backend):
     1. ARCHITECTURE - Design system architecture

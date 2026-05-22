@@ -170,7 +170,7 @@ async def run_arbormind_workflow(
     from app.arbormind.adapters.orchestrator import ArborMindOrchestrator
     from app.arbormind.adapters.execution_adapter import ExecutionAdapter, ExecutionDirective
     from app.arbormind.adapters.continuation_controller import ContinuationController
-    from app.arbormind.adapters.oracle import Oracle
+    from app.arbormind.adapters.oracle import OracleSupervisor
     from app.arbormind.phase_1.state import ExecutionState
     from app.arbormind.phase_1.failure_memory import FailureMemory
     from app.arbormind.phase_2.cognitive_directive import CognitiveDirective
@@ -178,7 +178,7 @@ async def run_arbormind_workflow(
     from app.arbormind.phase_2.mutation_authority import MutationAuthority
     from app.arbormind.phase_2.attention_bias import AttentionBiasEngine
     from app.arbormind.phase_3.attention import AttentionRouter
-    from app.arbormind.phase_3.convergence import ConvergenceEngine
+    from app.arbormind.phase_3.convergence import ConvergenceKernel
     from app.arbormind.phase_3.divergence_controller import DivergenceController
     from app.arbormind.phase_3.circularity_monitor import CircularityMonitor
     from app.arbormind.phase_3.validity import ValidityEvaluator
@@ -230,7 +230,7 @@ async def run_arbormind_workflow(
     divergence_controller = DivergenceController(llm=None)
 
     # Oracle (multimodal witness)
-    oracle = Oracle(project_path=str(project_path))
+    oracle = OracleSupervisor(project_path=str(project_path))
 
     # Attention Router
     attention_router = AttentionRouter()
@@ -239,7 +239,7 @@ async def run_arbormind_workflow(
     validity_evaluator = ValidityEvaluator()
 
     # Convergence Engine
-    convergence_engine = ConvergenceEngine(validator=validity_evaluator)
+    convergence_engine = ConvergenceKernel(validator=validity_evaluator)
 
 
     # Circularity Monitor

@@ -26,7 +26,7 @@ from app.arbormind.phase_1.canonical_fingerprint import (
 )
 from app.arbormind.phase_2.cognitive_directive import CognitiveDirective, force_architectural_pivot
 from app.arbormind.phase_3.attention import AttentionRouter
-from app.arbormind.phase_3.convergence import ConvergenceEngine
+from app.arbormind.phase_3.convergence import ConvergenceKernel
 from app.arbormind.phase_3.convergence_ledger import ConvergenceLedger, IterationSnapshot
 from app.arbormind.phase_3.divergence_controller import DivergenceController
 from app.arbormind.phase_3.circularity_monitor import CircularityMonitor
@@ -40,7 +40,7 @@ from app.arbormind.phase_3.mutation_law import (
 )
 from .execution_adapter import ExecutionAdapter, ExecutionDirective, ExecutionOutcome
 from .continuation_controller import ContinuationController
-from .oracle import Oracle
+from .oracle import OracleSupervisor
 from app.core.logging import log
 
 
@@ -157,7 +157,7 @@ class ArborMindOrchestrator:
             observed_branches: Dict[str, Any] = {}
             for branch in branches:
                 evidence = self._oracle.observe(
-                    reasoning_trace=branch.reasoning_trace
+                    semantic_context={"reasoning_trace": branch.reasoning_trace}
                 )
 
                 branch_payload = {

@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * GenCode Studio Playwright Configuration
+ * GenxAI Studio Playwright Configuration
  * Pre-seeded configuration for E2E testing
  */
 export default defineConfig({

@@ -42,7 +42,7 @@ DEBUG_MODE = os.getenv("GENCODE_DEBUG", "false").lower() == "true"
 
 def log(scope: str, message: str, data: Any = None, project_id: Optional[str] = None) -> None:
     """
-    Unified logging function for GenCode Studio.
+    Unified logging function for GenxAI Studio.
     
     PHASE E4: Only INFO_SCOPES are shown by default.
     Set GENCODE_DEBUG=true to see all scopes.

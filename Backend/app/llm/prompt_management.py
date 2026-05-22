@@ -88,7 +88,7 @@ def filter_files_for_step(
     # ═══════════════════════════════════════════════════════════════════
     # ARCHITECTURE-ONLY POLICY (Clean Slate By Design)
     # ═══════════════════════════════════════════════════════════════════
-    # GenCode Studio uses GENERATIVE workflow - agents generate fresh code
+    # GenxAI Studio uses GENERATIVE workflow - agents generate fresh code
     # They should ONLY see architecture/*.md files, NEVER workspace code
    # This prevents:
     # - Token waste on irrelevant files

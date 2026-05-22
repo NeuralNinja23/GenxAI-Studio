@@ -41,5 +41,9 @@ pyyaml==6.0.2
 aiohttp==3.12.15
 numpy==2.2.1
 
+# Google Cloud / Vertex AI (ADC auth)
+google-auth==2.40.0
+google-auth-httplib2==0.2.0
+
 # Rate Limiting
 slowapi==0.1.9

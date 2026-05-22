@@ -1,7 +1,7 @@
 #backend/app/sandbox/_init_.py
 
 """
-GenCode Studio - Docker Sandbox Manager
+GenxAI Studio - Docker Sandbox Manager
 Isolated testing environment with live previews
 """
 

@@ -2,7 +2,7 @@
 """
 Validation Module - Single Entry Point for All Validation.
 
-This module provides a unified interface for validation across GenCode Studio.
+This module provides a unified interface for validation across GenxAI Studio.
 Import from this module instead of individual validator files.
 
 Usage:

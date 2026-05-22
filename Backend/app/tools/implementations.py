@@ -1,5 +1,5 @@
 """
-GenCode Studio – Complete Tool System (Full Production Version)
+GenxAI Studio – Complete Tool System (Full Production Version)
 
 Includes:
  - Core sub-agent dispatcher
