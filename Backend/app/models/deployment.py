@@ -1,7 +1,9 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional, Dict, Literal
 from beanie import Document, Indexed
 from pydantic import Field
+
+from app.core.time import utc_now
 
 DeploymentStatus = Literal["initialized", "deploying", "success", "failed", "rolling_back", "not_deployed"]
 
@@ -17,9 +19,9 @@ class Deployment(Document):
     version: str = "1.0.0"
     
     # Timestamps
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=utc_now)
     deployed_at: Optional[datetime] = None
-    last_updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    last_updated_at: datetime = Field(default_factory=utc_now)
     
     # Runtime info
     url: Optional[str] = None

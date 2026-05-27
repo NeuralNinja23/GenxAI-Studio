@@ -21,6 +21,11 @@ INFO_SCOPES = {
     "TOKENS",       # Token usage
     "HDAP",         # File protocol
     "LOCKFILE",     # Cache hits
+    "WORKFLOW",     # Scaffold and entry points
+    "ARBOR_RUNTIME",# Cognitive controllers
+    "KERNEL",       # Execution kernel and transactions
+    "PROJECTOR",    # AST file projections
+    "COGNITION",    # Bounded branch search
 }
 
 

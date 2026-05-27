@@ -40,13 +40,16 @@ async def get_agents_status():
 
 @router.get("/active")
 async def get_active_workflows():
-    """Get list of active workflows."""
-    from app.orchestration.state import _running_workflows
+    """Get list of active workflows from MongoDB."""
+    from app.models.workflow import WorkflowSession
+    
+    # Query database for all sessions that are currently running
+    active_sessions = await WorkflowSession.find(WorkflowSession.is_running == True).to_list()
     
     return {
         "active": [
-            {"project_id": pid, "running": running}
-            for pid, running in _running_workflows.items()
-            if running
+            {"project_id": session.project_id, "running": True}
+            for session in active_sessions
         ]
     }
+

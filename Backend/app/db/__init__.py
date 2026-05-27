@@ -23,7 +23,11 @@ async def connect_db():
         from motor.motor_asyncio import AsyncIOMotorClient
         
         mongo_url = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
-        _client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=5000)
+        _client = AsyncIOMotorClient(
+            mongo_url,
+            serverSelectionTimeoutMS=5000,
+            tz_aware=True
+        )
 
         # FIX DB-001: Robust database name parsing
         try:
@@ -40,11 +44,43 @@ async def connect_db():
         from app.models import Project, WorkflowStepRecord, Snapshot
         from app.models.deployment import Deployment
         from app.models.workflow import WorkflowSession
-        
+        # V4 Stage 1 — Runtime models
+        from app.models.runtime_models import (
+            ExecutionLease,
+            RuntimeTransaction,
+            ProjectionSnapshot,
+            SubstrateManifest,
+        )
+        # V4 Stage 2 — IntentField
+        from app.models.directive import IntentField
+        # V4 Stage 2 — TopologyVersionRecord
+        from app.topology.topology_version_manager import TopologyVersionRecord
+        # V4 Stage 4 — EvidenceRecord
+        from app.governance.evidence_registry import EvidenceRecord
+
         await init_beanie(
             database=_db,
-            document_models=[Project, WorkflowStepRecord, Snapshot, Deployment, WorkflowSession]
+            document_models=[
+                # Existing models
+                Project,
+                WorkflowStepRecord,
+                Snapshot,
+                Deployment,
+                WorkflowSession,
+                # V4 Stage 1 — Runtime substrate
+                ExecutionLease,
+                RuntimeTransaction,
+                ProjectionSnapshot,
+                SubstrateManifest,
+                # V4 Stage 2 — IntentField
+                IntentField,
+                # V4 Stage 2 — TopologyVersionRecord
+                TopologyVersionRecord,
+                # V4 Stage 4 — EvidenceRecord
+                EvidenceRecord,
+            ]
         )
+
         print("[SUCCESS] [DB] Beanie ODM Initialized")
         _connection_error = None
     except Exception as e:

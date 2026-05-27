@@ -11,9 +11,16 @@ from app.core.constants import WorkflowStep
 from app.handlers.base import broadcast_status
 from app.core.logging import log
 from app.core.failure_boundary import FailureBoundary
+from typing import Any
 
 @FailureBoundary.enforce
-async def step_system_integration(branch) -> StepResult:
+async def step_system_integration(
+    project_id: str,
+    project_path: Path,
+    manager: Any = None,
+    # Keep branch as optional fallback for legacy caller compatibility during migration
+    branch: Any = None 
+) -> StepResult:
     """
     Step 5: System Integration (Pure Python).
     
@@ -22,10 +29,11 @@ async def step_system_integration(branch) -> StepResult:
     - Frontend: Generate API helpers and replace mock→API
     - Cross-system: Ensure consistent configuration
     """
-    # Extract context from branch
-    project_id = branch.intent["project_id"]
-    manager = branch.intent["manager"]
-    project_path = branch.intent["project_path"]
+    # Extract context from branch if provided by legacy engine
+    if branch and getattr(branch, "intent", None):
+        project_id = project_id or branch.intent.get("project_id")
+        manager = manager or branch.intent.get("manager")
+        project_path = project_path or branch.intent.get("project_path")
     
     await broadcast_status(
         manager, project_id, WorkflowStep.SYSTEM_INTEGRATION,

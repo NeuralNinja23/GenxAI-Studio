@@ -40,6 +40,9 @@ from app.core.logging import log
 
 _MODEL_MAP = {
     # Gemini 2.5 (latest) — confirmed working on Vertex AI
+    # Gemini 3.5 Mapping
+    "gemini-3.5-flash":             "gemini-2.5-flash",
+    "gemini-3.5-pro":               "gemini-2.5-pro",
     "gemini-2.5-flash":             "gemini-2.5-flash",
     "gemini-2.5-flash-preview-04-17": "gemini-2.5-flash",
     "gemini-2.5-flash-preview-05-20": "gemini-2.5-flash",

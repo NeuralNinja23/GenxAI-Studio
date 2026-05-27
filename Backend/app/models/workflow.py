@@ -1,13 +1,16 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 from beanie import Document, Indexed
 from pydantic import Field
+import uuid
+
+from app.core.time import utc_now
 
 class WorkflowStepRecord(Document):
     project_id: str
     step: str
     status: str
-    started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    started_at: datetime = Field(default_factory=utc_now)
     completed_at: Optional[datetime] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
     
@@ -41,7 +44,7 @@ class WorkflowSession(Document):
     # NEW: Cache architecture files from Victoria (avoids re-reading from disk)
     architecture_cache: Dict[str, str] = Field(default_factory=dict)
     
-    last_updated: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    last_updated: datetime = Field(default_factory=utc_now)
 
     class Settings:
         name = "workflow_sessions"

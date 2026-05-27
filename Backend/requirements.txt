@@ -47,3 +47,4 @@ google-auth-httplib2==0.2.0
 
 # Rate Limiting
 slowapi==0.1.9
+json-repair==0.59.10

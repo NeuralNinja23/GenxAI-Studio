@@ -12,12 +12,6 @@ from .parser import (
     get_incomplete_files,
     has_hdap_markers,
 )
-from .ui_beautifier import beautify_frontend_files
-from .dependency_fixer import (
-    auto_fix_backend_dependencies,
-    detect_missing_dependencies,
-    add_dependencies_to_requirements,
-)
 from .entity_discovery import (
     discover_primary_entity,
     discover_db_function,
@@ -50,10 +44,6 @@ __all__ = [
     "is_output_complete",
     "get_incomplete_files",
     "has_hdap_markers",
-    "beautify_frontend_files",
-    "auto_fix_backend_dependencies",
-    "detect_missing_dependencies",
-    "add_dependencies_to_requirements",
     # Entity Discovery
     "discover_primary_entity",
     "discover_db_function",
@@ -75,3 +65,4 @@ __all__ = [
     "is_valid_project_path",
     "ensure_project_directories",
 ]
+

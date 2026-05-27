@@ -179,9 +179,9 @@ def tool(
 )
 async def tool_subagentcaller(args: Dict[str, Any]) -> Dict[str, Any]:
     """Core LLM caller - delegates to Marcus/sub-agents."""
-    # Import the full implementation from implementations.py
-    from app.tools.implementations import tool_sub_agent_caller as impl
-    return await impl(args)
+    # Dispatches through materialization layer for governance
+    from app.tools.materializers import materializer_dispatcher
+    return await materializer_dispatcher(args)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

@@ -167,14 +167,26 @@ def normalize_llm_output(raw_output: str, step_name: str = "") -> Dict[str, Any]
     # Log results
     no_markers = result.get("no_hdap_markers", False)
     
-    if no_markers:
-        print(f"[HDAP] ❌ NO HDAP MARKERS in {step_name} - output will be rejected")
-        print(f"[HDAP]    Expected: <<<FILE path=\"...\">>>> content <<<END_FILE>>>")
-        print(f"[HDAP]    Preview: {raw_output[:300]}...")
+    if no_markers or not result["files"]:
+        # Attempt Graceful Degradation / Recovery
+        from app.utils.hdap_recovery import recover_hdap
+        salvaged = recover_hdap(raw_output)
+        
+        if salvaged:
+            print(f"[HDAP] ⚠️ NO STRICT HDAP MARKERS - but successfully salvaged {len(salvaged)} files using recovery heuristics")
+            result["files"] = salvaged
+            result["complete"] = True
+            result["no_hdap_markers"] = False  # Rescued
+        else:
+            print(f"[HDAP] ❌ NO HDAP MARKERS in {step_name} - output will be rejected")
+            print(f"[HDAP]    Expected: <<<FILE path=\"...\">>>> content <<<END_FILE>>>")
+            print(f"[HDAP]    Preview: {raw_output[:300]}...")
+            
     elif not result["complete"]:
         print(f"[HDAP] ⚠️ Incomplete output detected in {step_name}")
         print(f"[HDAP]    Incomplete files: {result['incomplete_files']}")
-    elif result["files"]:
+        
+    if result["files"]:
         print(f"[HDAP] ✅ Parsed {len(result['files'])} files from {step_name}")
     else:
         print(f"[HDAP] ⚠️ No files found in output for {step_name}")

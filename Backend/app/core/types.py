@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Literal, Optional, TypedDict
 from enum import Enum
 from pathlib import Path
-from pathlib import Path
+from app.core.time import utc_now
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -84,7 +84,7 @@ class StepExecutionRecord:
     """
     step_name: str
     files_created: List[str] = field(default_factory=list)
-    timestamp: str = field(default_factory=lambda: __import__('datetime').datetime.utcnow().isoformat())
+    timestamp: str = field(default_factory=lambda: utc_now().isoformat())
     attempt_number: int = 1  # 1 = first attempt, 2 = retry
     
     def to_dict(self) -> dict:

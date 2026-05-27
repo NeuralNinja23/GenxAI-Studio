@@ -5,6 +5,7 @@ from .validators import (
     EnvironmentValidator,
     DependencyValidator,
     InfrastructureValidator,
+    PackageValidator,
     PreflightFailure
 )
 
@@ -24,6 +25,7 @@ class PreflightKernel:
         validators = [
             EnvironmentValidator.validate,
             DependencyValidator.validate,
+            PackageValidator.validate,
             InfrastructureValidator.validate
         ]
         

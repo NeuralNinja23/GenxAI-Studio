@@ -1,20 +1,26 @@
 # app/workflow/engine.py
 """
-Workflow Entry Points - Facade for FASTOrchestratorV2.
+V4 Workflow Engine — Scaffold + Entry Point Stub
 
-Phase 2 Refactor:
-- WorkflowEngine (Class) REMOVED.
-- FASTOrchestratorV2 is the sole execution engine.
-- This file provides entry points: run_workflow, resume_workflow.
+V3 ArborMind cognitive loop has been permanently removed.
+
+This file retains:
+- run_workflow()          — project scaffolding (templates → disk)
+- resume_workflow()       — entry point called by WebSocket handler
+- autonomous_agent_workflow() — backwards-compat alias
+
+V4 execution kernel will be wired here in Stage 1.
 """
+
 import asyncio
+import shutil
 from pathlib import Path
 from typing import Any, Optional
 
 from app.core.config import settings
 from app.orchestration.state import WorkflowStateManager, CURRENT_MANAGERS
 from app.core.logging import log
-from app.orchestration.fast_orchestrator import FASTOrchestratorV2
+
 
 async def run_workflow(
     project_id: str,
@@ -25,46 +31,38 @@ async def run_workflow(
     model: Optional[str] = None,
 ) -> None:
     """
-    Start a new workflow for a project using ArborMind.
+    Start a new workflow for a project.
+
+    Phase 1 (this version): Scaffolds the project directory from templates.
+    Phase 2 (Stage 1): Wires V4 Execution Kernel here.
     """
-    # DEBUG: Immediate logging to verify function is called
-    print(f"[DEBUG] run_workflow CALLED for {project_id}")
     log("WORKFLOW", f"▶️ run_workflow called for {project_id}")
-    
-    # ===== GUARD: Atomically check and mark as running =====
+
+    # Guard: atomically check and mark as running
     can_start = await WorkflowStateManager.try_start_workflow(project_id)
     if not can_start:
-        log("WORKFLOW", f"⚠️ Workflow already running for {project_id}, ignoring duplicate request", project_id=project_id)
+        log("WORKFLOW", f"⚠️ Workflow already running for {project_id}, ignoring duplicate request")
         return
-    
+
     log("WORKFLOW", f"✅ Workflow guard passed, starting for {project_id}")
 
-    # Create project directory (Atomic scaffolding)
     final_project_path = workspaces_path / project_id
-    
-    # Use temporary directory until scaffolding is complete
     temp_dir_name = f".tmp_scaffold_{project_id}"
     project_path = workspaces_path / temp_dir_name
+
     if project_path.exists():
-        import shutil
         shutil.rmtree(project_path)
     project_path.mkdir(parents=True, exist_ok=True)
-    
+
     try:
-        import shutil
         base_templates = settings.paths.base_dir / "backend" / "templates"
-        
-        # ============================================================
-        # 👑 GOLDEN SEED SCAFFOLDING (Hybrid Manifest System)
-        # ============================================================
-        
-        # --- Backend Seed ---
+
+        # ── Backend Seed ──
         backend_dest = project_path / "backend"
         backend_dest.mkdir(parents=True, exist_ok=True)
-        
+
         backend_seed = base_templates / "backend" / "seed"
         if backend_seed.exists():
-            # Copy while EXCLUDING agent-owned artifacts
             def agent_artifact_filter(src, names):
                 ignored = []
                 for name in names:
@@ -76,38 +74,35 @@ async def run_workflow(
 
             shutil.copytree(backend_seed, backend_dest, dirs_exist_ok=True, ignore=agent_artifact_filter)
         else:
-             log("WORKFLOW", "⚠️ Missing Backend Seed Template!")
+            log("WORKFLOW", "⚠️ Missing Backend Seed Template!")
 
-        # Create routers/__init__.py manually if it was filtered out
-        (backend_dest / "app" / "routers").mkdir(exist_ok=True, parents=True) 
+        # Ensure routers __init__.py exists
+        (backend_dest / "app" / "routers").mkdir(exist_ok=True, parents=True)
         if not (backend_dest / "app" / "routers" / "__init__.py").exists():
             (backend_dest / "app" / "routers" / "__init__.py").write_text("# Routers package\n", encoding="utf-8")
-        
-        # --- Seed Test Template ---
+
+        # ── Test Templates ──
         tests_dest = backend_dest / "tests"
         tests_dest.mkdir(parents=True, exist_ok=True)
-        
         if not (tests_dest / "__init__.py").exists():
             (tests_dest / "__init__.py").write_text("# Tests package\n", encoding="utf-8")
-        
+
         test_template_src = backend_seed / "tests" / "test_contract_api.template"
         if test_template_src.exists():
-            test_template_dest = tests_dest / "test_contract_api.template"
-            shutil.copy2(test_template_src, test_template_dest)
-        
-        # --- Frontend Seed ---
+            shutil.copy2(test_template_src, tests_dest / "test_contract_api.template")
+
+        # ── Frontend Seed ──
         frontend_dest = project_path / "frontend"
         frontend_dest.mkdir(parents=True, exist_ok=True)
-        
+
         frontend_seed = base_templates / "frontend" / "seed"
         if frontend_seed.exists():
             shutil.copytree(frontend_seed, frontend_dest, dirs_exist_ok=True)
-        
-        # Copy Base Frontend (Vite Boilerplate)
+
         frontend_base = base_templates / "frontend"
         for item in frontend_base.iterdir():
             if item.name in ["seed", "reference"]:
-                continue 
+                continue
             if item.is_file():
                 shutil.copy2(item, frontend_dest / item.name)
             elif item.is_dir() and item.name == "src":
@@ -115,71 +110,79 @@ async def run_workflow(
                 for src_item in item.rglob("*"):
                     if src_item.is_file():
                         rel_path = src_item.relative_to(item)
-                        # Skip ui components - copied on-demand
                         if "components/ui" in str(rel_path).replace("\\", "/"):
                             continue
                         dest_path = src_dir / rel_path
                         dest_path.parent.mkdir(parents=True, exist_ok=True)
-                        if not dest_path.exists():  
+                        if not dest_path.exists():
                             shutil.copy2(src_item, dest_path)
             elif item.is_dir() and item.name == "public":
-                 shutil.copytree(item, frontend_dest / "public", dirs_exist_ok=True)
+                shutil.copytree(item, frontend_dest / "public", dirs_exist_ok=True)
 
-        # --- Frontend Tests Directory ---
-        frontend_tests_dest = frontend_dest / "tests"
-        frontend_tests_dest.mkdir(parents=True, exist_ok=True)
+        # ── Frontend Tests ──
+        (frontend_dest / "tests").mkdir(parents=True, exist_ok=True)
 
-        # --- Docker Infrastructure ---
+        # ── Docker Infrastructure ──
         backend_tmpl = base_templates / "backend"
-        if (backend_tmpl / "Dockerfile").exists():
-             shutil.copy2(backend_tmpl / "Dockerfile", backend_dest / "Dockerfile")
-        if (backend_tmpl / ".dockerignore").exists():
-             shutil.copy2(backend_tmpl / ".dockerignore", backend_dest / ".dockerignore")
-             
+        for docker_file in ["Dockerfile", ".dockerignore"]:
+            if (backend_tmpl / docker_file).exists():
+                shutil.copy2(backend_tmpl / docker_file, backend_dest / docker_file)
+
         frontend_tmpl = base_templates / "frontend"
-        if (frontend_tmpl / "Dockerfile").exists():
-             shutil.copy2(frontend_tmpl / "Dockerfile", frontend_dest / "Dockerfile")
-        if (frontend_tmpl / ".dockerignore").exists():
-             shutil.copy2(frontend_tmpl / ".dockerignore", frontend_dest / ".dockerignore")
+        for docker_file in ["Dockerfile", ".dockerignore"]:
+            if (frontend_tmpl / docker_file).exists():
+                shutil.copy2(frontend_tmpl / docker_file, frontend_dest / docker_file)
 
         docker_tmpl = base_templates / "docker"
-        if docker_tmpl.exists():
-            if (docker_tmpl / "docker-compose.yml").exists():
-                 shutil.copy2(docker_tmpl / "docker-compose.yml", project_path / "docker-compose.yml")
-            
-            frontend_env_content = """# Frontend Environment Variables
-VITE_API_URL=http://localhost:8001/api
-"""
-            (frontend_dest / ".env").write_text(frontend_env_content, encoding="utf-8")
-        
-        # Commit atomic scaffolding
+        if docker_tmpl.exists() and (docker_tmpl / "docker-compose.yml").exists():
+            shutil.copy2(docker_tmpl / "docker-compose.yml", project_path / "docker-compose.yml")
+
+        (frontend_dest / ".env").write_text(
+            "# Frontend Environment Variables\nVITE_API_URL=http://localhost:8001/api\n",
+            encoding="utf-8",
+        )
+
+        # Atomic commit
         if final_project_path.exists():
             shutil.rmtree(final_project_path)
         shutil.move(str(project_path), str(final_project_path))
-        project_path = final_project_path 
-            
+        project_path = final_project_path
+
     except Exception as e:
         log("WORKFLOW", f"Failed to scaffold project: {e}")
         if project_path.exists() and "tmp_scaffold" in str(project_path):
-             try:
-                 shutil.rmtree(project_path)
-             except Exception as cleanup_err:
-                 log("WORKFLOW", f"Cleanup failed (non-fatal): {cleanup_err}")
-        
+            try:
+                shutil.rmtree(project_path)
+            except Exception as cleanup_err:
+                log("WORKFLOW", f"Cleanup failed (non-fatal): {cleanup_err}")
         await WorkflowStateManager.stop_workflow(project_id)
         return
 
-    # Start ArborMind cognitive loop
-    from app.orchestration.fast_orchestrator import run_arbormind_workflow
-    
-    await run_arbormind_workflow(
+    # ── V4 Stage 1: Lock execution substrate ──
+    from app.runtime.execution_kernel import get_kernel
+    kernel = get_kernel()
+    await kernel.lock_substrate_after_scaffold(
         project_id=project_id,
-        manager=manager,
         project_path=project_path,
-        user_request=description,
-        provider=provider,
-        model=model,
     )
+
+    # ── V4 Execution Kernel entry point (Stage 6) ──
+    try:
+        from app.orchestration.arbor_runtime import ArborRuntime
+        runtime = ArborRuntime()
+        success = await runtime.explore_and_project(
+            project_id=project_id,
+            project_path=project_path,
+            user_request=description
+        )
+        if success:
+            log("WORKFLOW", f"✅ V4 Initial Scaffold projection complete for {project_id}")
+        else:
+            log("WORKFLOW", f"❌ V4 Initial Scaffold projection failed for {project_id}")
+    except Exception as e:
+        log("WORKFLOW", f"❌ V4 Scaffold execution error: {e}")
+    finally:
+        await WorkflowStateManager.stop_workflow(project_id)
 
 
 async def autonomous_agent_workflow(
@@ -190,7 +193,7 @@ async def autonomous_agent_workflow(
     provider: Optional[str] = None,
     model: Optional[str] = None,
 ) -> None:
-    """Backwards-compatible wrapper."""
+    """Backwards-compatible alias."""
     await run_workflow(project_id, description, workspaces_path, manager, provider, model)
 
 
@@ -201,52 +204,49 @@ async def resume_workflow(
     workspaces_dir: Path,
 ) -> None:
     """
-    Resume a paused workflow OR start a refine workflow.
-    Uses FASTOrchestratorV2 for execution.
+    Resume a paused workflow OR start a refinement pass.
+    V4 Execution Kernel will be wired here in Stage 1.
     """
     paused = await WorkflowStateManager.get_paused_state(project_id)
     project_path = workspaces_dir / project_id
-    
-    is_refinement = False
+
     provider = settings.llm.default_provider
     model = settings.llm.default_model
 
     if paused:
         log("WORKFLOW", f"Resuming paused workflow for {project_id}")
         await WorkflowStateManager.resume_workflow(project_id)
-        
-        if paused.get("step") == "refine":
-            is_refinement = True
-        
         provider = paused.get("provider") or provider
         model = paused.get("model") or model
     else:
-        # Check if project exists - if so, start refine workflow
         if project_path.exists():
-            log("WORKFLOW", f"Starting refine workflow for {project_id}")
-            is_refinement = True
+            log("WORKFLOW", f"Starting refinement pass for {project_id}")
         else:
             log("WORKFLOW", f"No project found for {project_id}, cannot resume/refine")
             return
 
-    # Atomic start check
     can_start = await WorkflowStateManager.try_start_workflow(project_id)
     if not can_start:
         log("WORKFLOW", f"⚠️ Workflow already running for {project_id}, ignoring")
         return
 
-    # Start ArborMind cognitive loop
-    from app.orchestration.fast_orchestrator import run_arbormind_workflow
-    
-    await run_arbormind_workflow(
-        project_id=project_id,
-        manager=manager,
-        project_path=project_path,
-        user_request=user_message,
-        provider=provider,
-        model=model,
-    )
-
+    # ── V4 Execution Kernel entry point (Stage 6) ──
+    try:
+        from app.orchestration.arbor_runtime import ArborRuntime
+        runtime = ArborRuntime()
+        success = await runtime.explore_and_project(
+            project_id=project_id,
+            project_path=project_path,
+            user_request=user_message
+        )
+        if success:
+            log("WORKFLOW", f"✅ V4 Refinement/Exploration complete for {project_id}")
+        else:
+            log("WORKFLOW", f"❌ V4 Refinement/Exploration failed for {project_id}")
+    except Exception as e:
+        log("WORKFLOW", f"❌ V4 Orchestration execution error: {e}")
+    finally:
+        await WorkflowStateManager.stop_workflow(project_id)
 
 
 async def resume_from_checkpoint_workflow(
@@ -258,36 +258,39 @@ async def resume_from_checkpoint_workflow(
     model: Optional[str] = None,
 ) -> bool:
     """
-    Resume a workflow explicitly from saved checkpoint (UI triggered).
+    Resume a workflow from a saved checkpoint (UI triggered).
+    V4 Execution Kernel will be wired here in Stage 1.
     """
     has_progress = await WorkflowStateManager.has_progress(project_id)
-    
     if not has_progress:
         log("WORKFLOW", f"No saved progress for {project_id}, cannot resume")
         return False
-    
+
     project_path = workspaces_path / project_id
     if not project_path.exists():
         log("WORKFLOW", f"Project directory not found: {project_path}")
         return False
-    
-    # Guard
+
     can_start = await WorkflowStateManager.try_start_workflow(project_id)
     if not can_start:
         log("WORKFLOW", f"⚠️ Workflow already running for {project_id}")
         return False
-    
-    log("WORKFLOW", f"🔄 Resuming workflow for {project_id}")
-    
-    # Start ArborMind cognitive loop
-    from app.orchestration.fast_orchestrator import run_arbormind_workflow
-    
-    await run_arbormind_workflow(
-        project_id=project_id,
-        manager=manager,
-        project_path=project_path,
-        user_request=description,
-        provider=provider,
-        model=model,
-    )
+
+    # ── V4 Execution Kernel entry point (Stage 6) ──
+    try:
+        from app.orchestration.arbor_runtime import ArborRuntime
+        runtime = ArborRuntime()
+        success = await runtime.explore_and_project(
+            project_id=project_id,
+            project_path=project_path,
+            user_request=description
+        )
+        if success:
+            log("WORKFLOW", f"✅ V4 Checkpoint recovery cycle complete for {project_id}")
+        else:
+            log("WORKFLOW", f"❌ V4 Checkpoint recovery cycle failed for {project_id}")
+    except Exception as e:
+        log("WORKFLOW", f"❌ V4 Checkpoint recovery error: {e}")
+    finally:
+        await WorkflowStateManager.stop_workflow(project_id)
     return True

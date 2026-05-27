@@ -43,6 +43,29 @@ class DependencyValidator:
                 "Node.js is not installed or not in PATH."
             )
 
+class PackageValidator:
+    """Validates that required Python packages are installed."""
+    @staticmethod
+    def validate() -> None:
+        REQUIRED_PACKAGES = [
+            "json_repair",
+            "pydantic",
+            "fastapi",
+        ]
+        
+        missing = []
+        for pkg in REQUIRED_PACKAGES:
+            try:
+                __import__(pkg)
+            except ImportError:
+                missing.append(pkg)
+                
+        if missing:
+            raise PreflightFailure(
+                "PackageDependency",
+                f"Required Python packages are missing: {', '.join(missing)}. Please run 'pip install -r requirements.txt'."
+            )
+
 class InfrastructureValidator:
     """Validates that the Docker daemon is actually running and responsive."""
     @staticmethod

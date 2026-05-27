@@ -3,9 +3,10 @@
 Workflow state management.
 """
 import asyncio
-from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from pathlib import Path
+
+from app.core.time import utc_now
 
 from app.core.types import ChatMessage
 
@@ -39,7 +40,7 @@ class WorkflowStateManager:
         """Set the running state for a project."""
         session = await WorkflowStateManager.get_session(project_id)
         session.is_running = running
-        session.last_updated = datetime.now(timezone.utc)
+        session.last_updated = utc_now()
         await session.save()
     
     @staticmethod
@@ -54,7 +55,7 @@ class WorkflowStateManager:
                 return False
             
             session.is_running = True
-            session.last_updated = datetime.now(timezone.utc)
+            session.last_updated = utc_now()
             await session.save()
             return True
     
@@ -64,7 +65,7 @@ class WorkflowStateManager:
         async with _workflow_lock:
             session = await WorkflowStateManager.get_session(project_id)
             session.is_running = False
-            session.last_updated = datetime.now(timezone.utc)
+            session.last_updated = utc_now()
             await session.save()
     
     @staticmethod
@@ -99,13 +100,13 @@ class WorkflowStateManager:
             "project_path": str(project_path),
             "provider": provider,
             "model": model,
-            "paused_at": datetime.now(timezone.utc).isoformat(),
+            "paused_at": utc_now().isoformat(),
         }
         
         session = await WorkflowStateManager.get_session(project_id)
         session.is_paused = True
         session.paused_state = state
-        session.last_updated = datetime.now(timezone.utc)
+        session.last_updated = utc_now()
         await session.save()
     
     @staticmethod
@@ -118,7 +119,7 @@ class WorkflowStateManager:
         state = session.paused_state
         session.is_paused = False
         session.paused_state = None
-        session.last_updated = datetime.now(timezone.utc)
+        session.last_updated = utc_now()
         await session.save()
         
         return state
@@ -191,7 +192,7 @@ class WorkflowStateManager:
         session.current_step = step
         if context:
             session.step_context[step] = context
-        session.last_updated = datetime.now(timezone.utc)
+        session.last_updated = utc_now()
         await session.save()
     
     @staticmethod
@@ -220,7 +221,7 @@ class WorkflowStateManager:
             session.completed_steps = []
             session.step_context = {}
             session.current_step = None
-            session.last_updated = datetime.now(timezone.utc)
+            session.last_updated = utc_now()
             await session.save()
     
     @staticmethod
@@ -252,7 +253,7 @@ class WorkflowStateManager:
         """
         session = await WorkflowStateManager.get_session(project_id)
         session.architecture_cache = architecture_files
-        session.last_updated = datetime.now(timezone.utc)
+        session.last_updated = utc_now()
         await session.save()
     
     @staticmethod

@@ -1,7 +1,21 @@
 # app/agents/__init__.py
 """
-Agent calling module - handles calls to sub-agents (Derek, Luna, Victoria).
+V4 Cognitive Faculty Package
+Exporting Victoria, Derek, Luna, Reggie, and Marcus clean-room models.
 """
-from .sub_agents import marcus_call_sub_agent, run_sub_agent
 
-__all__ = ["marcus_call_sub_agent", "run_sub_agent"]
+from app.agents.sub_agents import (
+    VictoriaUIFaculty,
+    DerekAPIFaculty,
+    LunaSchemaFaculty,
+    ReggieWorkflowFaculty,
+    MarcusGovernanceAnalyst,
+)
+
+__all__ = [
+    "VictoriaUIFaculty",
+    "DerekAPIFaculty",
+    "LunaSchemaFaculty",
+    "ReggieWorkflowFaculty",
+    "MarcusGovernanceAnalyst",
+]

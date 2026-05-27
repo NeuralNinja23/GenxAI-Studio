@@ -182,11 +182,24 @@ class GenCodeTool(str, Enum):
 # =====================================================================
 async def tool_sub_agent_caller(args: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Call Marcus → Derek/Victoria/Luna sub-agents and normalize their
-    output into a {"files": [...]} shape whenever possible.
+    V4 Sub-Agent Caller — STUB (Stage 6 pending).
+
+    V3 sub-agent system (marcus_call_sub_agent, run_sub_agent) has been
+    permanently removed. V4 bounded faculty system will be wired here
+    in Stage 6.
     """
+    return {
+        "success": False,
+        "error": "V4 Cognitive Faculty System not yet implemented (Stage 6 pending).",
+        "token_usage": {"input": 0, "output": 0},
+    }
+
+
+async def _tool_sub_agent_caller_v3_removed(args: Dict[str, Any]) -> Dict[str, Any]:
+    """DEAD CODE — kept as reference only. Remove in Stage 6 cleanup."""
     try:
-        from app.agents import marcus_call_sub_agent
+        raise NotImplementedError("V3 sub-agent system permanently removed.")
+        from app.agents import marcus_call_sub_agent_agent
         from app.utils.parser import normalize_llm_output
 
         sub_agent = args.get("sub_agent")
@@ -2231,6 +2244,11 @@ async def run_tool(name: str, args: Optional[Dict[str, Any]] = None) -> Dict[str
         # explicit alias for code_generator (V!=K spec)
         if normalized == "code_generator":
             normalized = "subagentcaller"
+
+        # Route subagentcaller through the materialization layer
+        if normalized == "subagentcaller":
+            from app.tools.materializers import materializer_dispatcher
+            return await materializer_dispatcher(args)
 
         func = TOOL_FUNCTION_MAP.get(normalized)
         if func is None:

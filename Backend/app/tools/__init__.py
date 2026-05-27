@@ -3,12 +3,8 @@
 Tools Module - The SINGLE SOURCE OF TRUTH
 
 Architecture:
-- tools.py: 36 tool definitions (ID, function, capabilities, phases)
-- planner.py: Builds tool plans for steps
-- executor.py: Executes tool plans linearly
+- tools.py: 40 tool definitions (ID, function, capabilities, phases)
 - registry.py: Simple lookup/run interface
-
-NO OTHER FILE should define "what tools exist".
 """
 
 # The consolidated tool registry
@@ -27,21 +23,6 @@ from .tools import (
 # Legacy-compatible imports
 from .registry import get_available_tools
 
-# Planning primitives
-from .planning import (
-    ToolPlan,
-    ToolInvocationPlan,
-    ToolInvocationResult,
-    ToolPlanExecutionResult,
-    StepFailure,
-)
-
-# Plan building
-from .planner import build_tool_plan, get_plan_builder
-
-# Plan execution
-from .executor import execute_tool_plan
-
 __all__ = [
     # Tools registry (NEW - single source of truth)
     "TOOLS",
@@ -55,15 +36,5 @@ __all__ = [
     "run_tool",
     # Legacy
     "get_available_tools",
-    # Planning
-    "ToolPlan",
-    "ToolInvocationPlan",
-    "ToolInvocationResult",
-    "ToolPlanExecutionResult",
-    "StepFailure",
-    # Building
-    "build_tool_plan",
-    "get_plan_builder",
-    # Execution
-    "execute_tool_plan",
 ]
+

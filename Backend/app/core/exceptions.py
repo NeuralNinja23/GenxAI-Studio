@@ -90,3 +90,14 @@ class ValidationError(GenCodeError):
 class ParseError(GenCodeError):
     """JSON/output parsing error."""
     pass
+
+
+class ArtifactOntologyFailure(GenCodeError):
+    """Semantic realization or ontology mismatch failure."""
+    pass
+
+
+class AgentCapabilityMismatch(GenCodeError):
+    """Requested step capability is not supported by the designated agent."""
+    pass
+
