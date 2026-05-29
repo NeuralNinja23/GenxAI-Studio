@@ -25,6 +25,7 @@ import {
   getWorkspaceFiles,
   getFileContent,
   getProjectProgress,
+  resetWorkflowState,
 } from "../services/agentService";
 import { startDeployment } from "../services/deploymentService";
 import { ChatMessage, MessageSender, FileTreeNode } from "../types";
@@ -75,6 +76,7 @@ const WorkspacePage: React.FC = () => {
   const [paused, setPaused] = useState(false);
   const [pauseMessage, setPauseMessage] = useState("");
   const [showCostDashboard, setShowCostDashboard] = useState(false);
+  const [isStuckWorkflow, setIsStuckWorkflow] = useState(false); // true = backend says already_running but shouldn't be
 
   const ws = useRef<WebSocket | null>(null);
   const hasStartedGeneration = useRef(false);
@@ -388,14 +390,30 @@ const WorkspacePage: React.FC = () => {
     // This prevents accidentally resuming from stale MongoDB state
     startWorkflow(projectId, initialPrompt, "fresh")
       .then((response) => {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `success-${Date.now()}`,
-            sender: MessageSender.Agent,
-            content: response?.message || "Workflow started successfully. Awaiting updates",
-          },
-        ]);
+        if (response?.already_running) {
+          // Backend says a workflow is stuck — surface the force-reset UI
+          setIsWorkflowRunning(false);
+          setIsStuckWorkflow(true);
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `stuck-${Date.now()}`,
+              sender: MessageSender.Agent,
+              content:
+                "⚠️ The backend reports a workflow is already in progress for this project, but nothing seems to be running. This is a stale lock from a previous crash or server restart. Click **Force Reset & Retry** below to clear it.",
+            },
+          ]);
+          startedWorkspaces.delete(projectId);
+        } else {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `success-${Date.now()}`,
+              sender: MessageSender.Agent,
+              content: response?.message || "Workflow started successfully. Awaiting updates",
+            },
+          ]);
+        }
       })
       .catch((err) => {
         setIsWorkflowRunning(false);
@@ -416,6 +434,59 @@ const WorkspacePage: React.FC = () => {
         isRequestInFlight.current = false;
       });
   }, [initialPrompt, projectId, isWsOpen]);
+
+  // ---- Force-reset stuck workflow state ----
+  const handleForceReset = async () => {
+    if (!projectId) return;
+    try {
+      const ok = await resetWorkflowState(projectId);
+      if (ok) {
+        setIsStuckWorkflow(false);
+        setIsWorkflowRunning(false);
+        // Retry the original workflow start
+        if (initialPrompt) {
+          startedWorkspaces.delete(projectId);
+          isRequestInFlight.current = false;
+          // Re-trigger by temporarily forcing a fresh start call
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `reset-ok-${Date.now()}`,
+              sender: MessageSender.Agent,
+              content: "🔓 State cleared. Restarting workflow...",
+            },
+          ]);
+          const resp = await startWorkflow(projectId, initialPrompt, "fresh");
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `retry-ok-${Date.now()}`,
+              sender: MessageSender.Agent,
+              content: resp?.message || "Workflow restarted.",
+            },
+          ]);
+        }
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `reset-fail-${Date.now()}`,
+            sender: MessageSender.Agent,
+            content: "❌ Failed to reset state. Try refreshing the page.",
+          },
+        ]);
+      }
+    } catch (err: any) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `reset-err-${Date.now()}`,
+          sender: MessageSender.Agent,
+          content: `❌ Reset error: ${err.message}`,
+        },
+      ]);
+    }
+  };
 
   // ---- Resume workflow ----
   const handleResume = async () => {
@@ -663,6 +734,22 @@ const WorkspacePage: React.FC = () => {
                   className="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-sm font-medium text-white transition-colors"
                 >
                   Continue
+                </button>
+              </div>
+            )}
+
+            {/* Stuck Workflow Banner */}
+            {isStuckWorkflow && (
+              <div className="flex items-center justify-between bg-red-900/20 border border-red-500/30 rounded-xl p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                  <p className="text-sm text-red-200">Stale workflow lock detected.</p>
+                </div>
+                <button
+                  onClick={handleForceReset}
+                  className="px-4 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-sm font-medium text-white transition-colors whitespace-nowrap"
+                >
+                  Force Reset &amp; Retry
                 </button>
               </div>
             )}

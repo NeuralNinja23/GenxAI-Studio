@@ -330,5 +330,31 @@ export const clearProgress = async (
   }
 };
 
+/**
+ * Force-reset the workflow running/paused state for a project.
+ * Call this when the backend keeps returning "Workflow already in progress"
+ * but no workflow is actually running.
+ */
+export const resetWorkflowState = async (
+  projectId: string
+): Promise<boolean> => {
+  if (!validateProjectId(projectId)) {
+    throw new Error('Invalid project ID format');
+  }
+
+  try {
+    const response = await axios.post(
+      `${API_BASE}/${projectId}/reset-state`,
+      {},
+      { timeout: TIMEOUTS.CONNECTION_TEST }
+    );
+    console.log(`[RESET WORKFLOW STATE] Success for ${projectId}:`, response.data);
+    return true;
+  } catch (error) {
+    console.error('[RESET WORKFLOW STATE] Error:', error);
+    return false;
+  }
+};
+
 // Export ProgressResponse type for components
 export type { ProgressResponse };

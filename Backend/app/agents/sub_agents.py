@@ -1,204 +1,168 @@
 # app/agents/sub_agents.py
 """
-V4 Cognitive Faculty System — Stage 6: Minimal Cognition
+V4 Cognitive Faculty System — Stage 6: Bounded LLM-Driven Cognition
 
-Defines the clean-room cognitive faculties:
-- Victoria
-- Derek
-- Luna
-- Reggie
-- Marcus
-
-All faculties operate strictly inside the
-non-authoritative mutation space.
-
-Marcus acts purely to emit governance advisory signals.
+Defines the live wired cognitive faculties calling Gemini via the unified
+LLM adapter and parsing outputs strictly through PatchIRNormalizer.
 """
 
 from typing import Any, Dict, List, Optional
+import json
 import uuid
 
-from app.cognition.patch_ir import PatchIR
-from app.cognition.branch import BranchState
+from app.sentinel.cognition.patch_ir import PatchIR
+from app.sentinel.cognition.branch import BranchState
 from app.models.runtime_models import MutationTier
+from app.sentinel.topology.project_graph import ProjectTopologyGraph
+
+# Prompt and LLM imports
+from app.llm.prompts import VICTORIA_PROMPT, DEREK_PROMPT, LUNA_PROMPT, MARCUS_PROMPT
+from app.llm.adapter import call_llm
+from app.sentinel.cognition.patch_ir_normalizer import PatchIRNormalizer
+from app.core.logging import log
+
+
+def serialize_graph_for_llm(graph: ProjectTopologyGraph) -> str:
+    """Serializes ProjectTopologyGraph into human-readable logical components, stripping file paths/code."""
+    lines = []
+    lines.append("=== CURRENT ACTIVE TOPOLOGY ===")
+    
+    for node_id, node in graph.nodes.items():
+        lines.append(f"- Node: {node_id} ({node.node_type.value})")
+        props = node.properties
+        if node.node_type.value == "SCHEMA_NODE":
+            lines.append(f"  Entity Name: {props.get('entity_name')}")
+            lines.append(f"  Description: {props.get('description')}")
+            fields = props.get('fields', [])
+            fields_str = ", ".join([f"{f['name']}: {f['type']}" for f in fields])
+            lines.append(f"  Fields: [{fields_str}]")
+        elif node.node_type.value == "API_NODE":
+            lines.append(f"  Router Name: {props.get('router_name')}")
+            endpoints = props.get('endpoints', [])
+            eps_str = ", ".join([f"{e['method']} {e['path']}" for e in endpoints])
+            lines.append(f"  Endpoints: [{eps_str}]")
+        elif node.node_type.value == "UI_NODE":
+            lines.append(f"  Component Name: {props.get('component_name')}")
+            lines.append(f"  Layout Type: {props.get('layout_type')}")
+            lines.append(f"  Role: {props.get('role')}")
+            bindings = props.get('state_bindings', [])
+            bindings_str = ", ".join([f"{b['state_name']} ({b['binding_type']})" for b in bindings])
+            lines.append(f"  State Bindings: [{bindings_str}]")
+            
+    for edge in graph.edges:
+        lines.append(f"- Relationship: {edge.source_id} ==[{edge.relation}]==> {edge.target_id}")
+        
+    return "\n".join(lines)
 
 
 class VictoriaUIFaculty:
     """
-    Victoria:
-    Suggests structural UI mutations and layout evolution paths.
-
-    IMPORTANT:
-    - Never assumes specific application archetypes
-    - Never hardcodes dashboard/page/component identities
-    - Operates purely on topology-discovered renderable nodes
+    Victoria: UI Faculty
+    Suggests component layouts, navigation routes, and state bindings.
     """
 
     @staticmethod
-    def propose_mutations(
+    async def propose_mutations(
         branch: BranchState,
         description: str,
+        intent: Any = None,
     ) -> List[PatchIR]:
-
+        log("COGNITION", "Victoria UI Faculty analyzing intentions...")
         graph = branch.topology_graph
 
-        # Discover renderable UI nodes dynamically
-        ui_nodes = [
-            node_id
-            for node_id, node in graph.nodes.items()
-            if node.node_type.value == "UI_NODE"
-        ]
+        user_prompt = f"""
+USER INTENT / REQUEST:
+{description}
 
-        proposals: List[PatchIR] = []
-
-        # No UI exists yet → create emergent root UI
-        if not ui_nodes:
-
-            root_ui_id = f"root_ui_{uuid.uuid4().hex[:6]}"
-
-            proposals.append(
-                PatchIR(
-                    patch_id=f"vic-ui-root-{uuid.uuid4().hex[:6]}",
-                    target_node_id=root_ui_id,
-                    mutation_tier=MutationTier.STRUCTURAL_UI,
-                    action="ADD_NODE",
-                    node_data={
-                        "node_type": "UI_NODE",
-                        "properties": {
-                            "component_name": "RootView",
-                            "layout_style": "adaptive",
-                            "generated": True,
-                            "description": description,
-                            "is_root": True,
-                        },
-                    },
-                )
-            )
-
-            return proposals
-
-        # Mutate existing discovered UI nodes
-        for target_ui in ui_nodes:
-
-            proposals.append(
-                PatchIR(
-                    patch_id=f"vic-ui-{uuid.uuid4().hex[:6]}",
-                    target_node_id=target_ui,
-                    mutation_tier=MutationTier.STRUCTURAL_UI,
-                    action="MODIFY_NODE",
-                    node_data={
-                        "properties": {
-                            "layout_style": "adaptive_grid",
-                            "semantic_intent": description,
-                            "enhanced_by_victoria": True,
-                        }
-                    },
-                )
-            )
-
-        return proposals
+{serialize_graph_for_llm(graph)}
+"""
+        from app.sentinel.cognition.mutation_engine import MutationEngine
+        patches = await MutationEngine.critique_and_stabilize(
+            prompt=user_prompt,
+            system_prompt=VICTORIA_PROMPT,
+            branch=branch,
+            intent=intent
+        )
+        # [INSTRUMENT-A] Measure Victoria's output immediately after stabilization
+        ui_patches = [p for p in patches if p.node_data and p.node_data.get("node_type") == "UI_NODE"]
+        log("COGNITION", f"[VICTORIA-INSTRUMENT] raw_patches={len(patches)} | ui_node_patches={len(ui_patches)} | patch_ids={[p.patch_id for p in patches[:5]]}")
+        return patches
 
 
 class DerekAPIFaculty:
     """
-    Derek:
-    Suggests API routes, backend services,
-    and interaction flows.
+    Derek: API Faculty
+    Suggests API route paths, REST methods, and service wiring layers.
     """
 
     @staticmethod
-    def propose_mutations(
+    async def propose_mutations(
         branch: BranchState,
         description: str,
+        intent: Any = None,
     ) -> List[PatchIR]:
+        log("COGNITION", "Derek API Faculty analyzing routing requirements...")
+        graph = branch.topology_graph
 
-        api_id = f"api_node_{uuid.uuid4().hex[:6]}"
+        user_prompt = f"""
+USER INTENT / REQUEST:
+{description}
 
-        return [
-            PatchIR(
-                patch_id=f"derek-api-{uuid.uuid4().hex[:6]}",
-                target_node_id=api_id,
-                mutation_tier=MutationTier.BEHAVIORAL,
-                action="ADD_NODE",
-                node_data={
-                    "node_type": "API_NODE",
-                    "properties": {
-                        "route_path": "/api/v1/resource",
-                        "method": "GET",
-                        "generated": True,
-                        "description": description,
-                    }
-                },
-            )
-        ]
+{serialize_graph_for_llm(graph)}
+"""
+        from app.sentinel.cognition.mutation_engine import MutationEngine
+        return await MutationEngine.critique_and_stabilize(
+            prompt=user_prompt,
+            system_prompt=DEREK_PROMPT,
+            branch=branch,
+            intent=intent
+        )
 
 
 class LunaSchemaFaculty:
     """
-    Luna:
-    Suggests database entities,
-    schemas,
-    and relationships.
+    Luna: Database Schema Faculty
+    Suggests entity structures, indexes, and standard data definitions.
     """
 
     @staticmethod
-    def propose_mutations(
+    async def propose_mutations(
         branch: BranchState,
         description: str,
+        intent: Any = None,
     ) -> List[PatchIR]:
+        log("COGNITION", "Luna Database Schema Faculty designing entity bounds...")
+        graph = branch.topology_graph
 
-        schema_id = f"schema_node_{uuid.uuid4().hex[:6]}"
+        user_prompt = f"""
+USER INTENT / REQUEST:
+{description}
 
-        return [
-            PatchIR(
-                patch_id=f"luna-db-{uuid.uuid4().hex[:6]}",
-                target_node_id=schema_id,
-                mutation_tier=MutationTier.TOPOLOGY,
-                action="ADD_NODE",
-                node_data={
-                    "node_type": "SCHEMA_NODE",
-                    "properties": {
-                        "entity_name": "GeneratedEntity",
-                        "fields": [
-                            {
-                                "name": "id",
-                                "type": "str",
-                                "required": True,
-                            },
-                            {
-                                "name": "title",
-                                "type": "str",
-                                "required": True,
-                            },
-                            {
-                                "name": "created_at",
-                                "type": "datetime",
-                                "required": True,
-                            },
-                        ],
-                        "generated": True,
-                        "description": description,
-                    }
-                },
-            )
-        ]
+{serialize_graph_for_llm(graph)}
+"""
+        from app.sentinel.cognition.mutation_engine import MutationEngine
+        return await MutationEngine.critique_and_stabilize(
+            prompt=user_prompt,
+            system_prompt=LUNA_PROMPT,
+            branch=branch,
+            intent=intent
+        )
 
 
 class ReggieWorkflowFaculty:
     """
-    Reggie:
-    Suggests workflow node flows
-    and state machine transitions.
+    Reggie: Workflow Faculty (Adaptive Fallback)
+    Suggests transitions and logical state workflow diagrams.
     """
 
     @staticmethod
-    def propose_mutations(
+    async def propose_mutations(
         branch: BranchState,
         description: str,
+        intent: Any = None,
     ) -> List[PatchIR]:
-
+        # Fallback to simple topology additions for stages
         workflow_id = f"workflow_{uuid.uuid4().hex[:6]}"
-
         return [
             PatchIR(
                 patch_id=f"reggie-wf-{uuid.uuid4().hex[:6]}",
@@ -208,14 +172,8 @@ class ReggieWorkflowFaculty:
                 node_data={
                     "node_type": "WORKFLOW_NODE",
                     "properties": {
-                        "workflow_name": "GeneratedWorkflow",
-                        "states": [
-                            "IDLE",
-                            "PROCESSING",
-                            "COMPLETED",
-                            "FAILED",
-                        ],
-                        "generated": True,
+                        "workflow_name": "EmergencyFallbackWorkflow",
+                        "states": ["IDLE", "RUNNING", "COMPLETED"],
                         "description": description,
                     }
                 },
@@ -225,88 +183,88 @@ class ReggieWorkflowFaculty:
 
 class MarcusGovernanceAnalyst:
     """
-    Marcus:
-    The Conscience, not the Ruler.
-
-    Emits soft advisory signals routed strictly
-    through the AttentionRouter.
-
-    Marcus has ZERO authority to:
-    - modify graphs
-    - write files
-    - approve transactions
+    Marcus: Governance Conscience
+    Reviews proposed transformations, returning soft warnings and AttentionRouter advice.
     """
 
     @staticmethod
-    def analyze_governance(
+    async def analyze_governance(
         branch: BranchState,
         drift_severity: str = "CLEAN",
     ) -> Dict[str, Any]:
-        """
-        Analyze branch convergence profile
-        and failure similarity.
+        log("COGNITION", "Marcus Governance Conscience conducting structural checks...")
+        
+        # Prepare evaluation profile
+        raw_prompt = f"""
+Evaluate branch '{branch.branch_id}' converging with drift '{drift_severity}'.
+Repulsion Metric: {branch.repulsion_score}
+Entropy History: {branch.entropy_history}
 
-        Emits advisory values
-        to influence the AttentionRouter.
-        """
+{serialize_graph_for_llm(branch.topology_graph)}
+"""
+        # Default fallback
+        governance_result = {
+            "branch_id": branch.branch_id,
+            "marcus_advisory_modifier": 1.0,
+            "warnings": [],
+            "is_stable": True
+        }
 
-        modifier = 1.0
-        warnings: List[str] = []
-        is_stable = True
-
-        # ─────────────────────────────────────────
-        # 1. Repulsion Warning
-        # ─────────────────────────────────────────
-
-        if branch.repulsion_score > 0.6:
-
-            modifier *= 0.5
-
-            warnings.append(
-                f"Branch '{branch.branch_id}' "
-                f"displays severe structural proximity "
-                f"to historical failures."
+        try:
+            raw_response = await call_llm(
+                prompt=raw_prompt,
+                system_prompt=MARCUS_PROMPT,
+                temperature=0.1
             )
+            
+            # Clean markdown if returned
+            cleaned = raw_response.strip()
+            if cleaned.startswith("```json"):
+                cleaned = cleaned[7:]
+            elif cleaned.startswith("```"):
+                cleaned = cleaned[3:]
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3]
+            cleaned = cleaned.strip()
 
-            is_stable = False
+            parsed = json.loads(cleaned)
+            
+            decision = parsed.get("governance_decision", "ALLOW")
+            
+            metrics = parsed.get("metrics") or {}
+            branch_entropy_val = metrics.get("branch_entropy")
+            if branch_entropy_val is None:
+                branch_entropy_val = 0.1
+            modifier = float(branch_entropy_val)
+            
+            warnings = [issue.get("description") for issue in parsed.get("issues", [])]
+            
+            governance_result["marcus_advisory_modifier"] = 0.2 if decision == "REJECT" else 0.6 if decision == "ADVISE_CAUTION" else 1.0
+            governance_result["warnings"] = warnings
+            governance_result["is_stable"] = decision != "REJECT"
 
-        # ─────────────────────────────────────────
-        # 2. Entropy Oscillation Check
-        # ─────────────────────────────────────────
+        except Exception as e:
+            log("COGNITION", f"⚠️ Marcus analysis failure: {e}. Falling back to baseline calculations.")
+            
+            # Deterministic backup formulas
+            modifier = 1.0
+            warnings = []
+            is_stable = True
 
-        if len(branch.entropy_history) >= 3:
-
-            h = branch.entropy_history
-
-            if h[-1] > h[-2] and h[-2] < h[-3]:
-
-                modifier *= 0.7
-
-                warnings.append(
-                    "Oscillation detected in "
-                    "branch entropy history."
-                )
-
+            if branch.repulsion_score > 0.6:
+                modifier *= 0.5
+                warnings.append("Severe repulsion index failure.")
                 is_stable = False
 
-        # ─────────────────────────────────────────
-        # 3. Drift Severity
-        # ─────────────────────────────────────────
+            if len(branch.entropy_history) >= 3:
+                h = branch.entropy_history
+                if h[-1] > h[-2] and h[-2] < h[-3]:
+                    modifier *= 0.7
+                    warnings.append("Entropy oscillation detected.")
+                    is_stable = False
 
-        if drift_severity in ["SEVERE", "CRITICAL"]:
+            governance_result["marcus_advisory_modifier"] = modifier
+            governance_result["warnings"] = warnings
+            governance_result["is_stable"] = is_stable
 
-            modifier *= 0.2
-
-            warnings.append(
-                f"Workspace drift is '{drift_severity}'. "
-                f"Extreme risk of branch invalidation."
-            )
-
-            is_stable = False
-
-        return {
-            "branch_id": branch.branch_id,
-            "marcus_advisory_modifier": modifier,
-            "warnings": warnings,
-            "is_stable": is_stable,
-        }
+        return governance_result

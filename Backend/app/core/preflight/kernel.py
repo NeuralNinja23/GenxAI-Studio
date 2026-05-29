@@ -12,7 +12,7 @@ from .validators import (
 class PreflightKernel:
     """
     The Runtime Integrity Kernel.
-    Executes all preflight validators before ArborMind is allowed to boot.
+    Executes all preflight validators before Sentinel is allowed to boot.
     Aggregates failures into a categorized diagnostic report rather than crashing instantly.
     """
     
@@ -52,7 +52,7 @@ class PreflightKernel:
                     if err.context:
                         print(f"    Context: {err.context}")
                         
-            print("\nArborMind cannot guarantee deterministic execution in a compromised environment.")
+            print("\nSentinel cannot guarantee deterministic execution in a compromised environment.")
             sys.exit(1)
             
         log("PREFLIGHT", "✅ Host integrity verified. Kernel boot complete.")

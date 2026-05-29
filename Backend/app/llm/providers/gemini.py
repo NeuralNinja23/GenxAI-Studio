@@ -119,7 +119,7 @@ async def call(
     system_prompt: str = "",
     model: Optional[str] = None,
     temperature: float = 0.7,
-    max_tokens: int = 8000,
+    max_tokens: int = 65536,
     stop_sequences: Optional[list] = None,
 ) -> dict:
     """
@@ -168,7 +168,7 @@ async def call(
     generation_config = {
         "temperature": 0.2,         # Reduced for deterministic code generation
         "maxOutputTokens": max_tokens,
-        # NOTE: responseMimeType intentionally omitted — agents output HDAP format, not JSON
+        # NOTE: responseMimeType intentionally omitted — agents output PatchIR format, not JSON
     }
 
     if stop_sequences:

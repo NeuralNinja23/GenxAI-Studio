@@ -3,10 +3,15 @@
 Workflow state management.
 """
 import asyncio
+from datetime import timedelta
 from typing import Any, Dict, List, Optional
 from pathlib import Path
 
 from app.core.time import utc_now
+
+# A workflow is considered "stale" (crashed/dead) if it has been marked as
+# running for longer than this many seconds without completing.
+WORKFLOW_STALE_TIMEOUT_SECONDS = 300  # 5 minutes
 
 from app.core.types import ChatMessage
 
@@ -47,13 +52,28 @@ class WorkflowStateManager:
     async def try_start_workflow(project_id: str) -> bool:
         """
         Atomically check if workflow can start and mark it as running.
-        FIX STATE-001: Uses DB atomicity (mostly) and lock for safety.
+
+        Stale-lock detection: if the session has been flagged is_running=True
+        for longer than WORKFLOW_STALE_TIMEOUT_SECONDS, the lock is considered
+        dead (e.g. from a crash or uvicorn reload) and is auto-cleared so a
+        new workflow can begin.
         """
         async with _workflow_lock:
             session = await WorkflowStateManager.get_session(project_id)
             if session.is_running:
-                return False
-            
+                # ── Stale-lock check ────────────────────────────────────────
+                age = utc_now() - session.last_updated
+                if age > timedelta(seconds=WORKFLOW_STALE_TIMEOUT_SECONDS):
+                    from app.core.logging import log
+                    log(
+                        "WORKFLOW_STATE",
+                        f"⚠️ Stale workflow lock detected for {project_id} "
+                        f"(age={int(age.total_seconds())}s). Auto-clearing."
+                    )
+                    # Fall through and allow start
+                else:
+                    return False
+
             session.is_running = True
             session.last_updated = utc_now()
             await session.save()
@@ -169,8 +189,25 @@ class WorkflowStateManager:
             session.is_paused = False
             session.paused_state = None
             await session.save()
-            
+
         _active_managers.pop(project_id, None)
+
+    @staticmethod
+    async def force_reset_state(project_id: str) -> None:
+        """
+        Unconditionally clear is_running and is_paused for a project.
+        Called by the /reset-state API endpoint when the user knows a
+        workflow is stuck and wants to force-unblock it.
+        """
+        async with _workflow_lock:
+            session = await WorkflowSession.find_one(WorkflowSession.project_id == project_id)
+            if session:
+                session.is_running = False
+                session.is_paused = False
+                session.paused_state = None
+                session.last_updated = utc_now()
+                await session.save()
+            _active_managers.pop(project_id, None)
 
     # ════════════════════════════════════════════════════════════════
     # RESUME FUNCTIONALITY - Persist workflow progress

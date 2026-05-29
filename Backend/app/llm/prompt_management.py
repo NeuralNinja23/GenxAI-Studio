@@ -1,7 +1,7 @@
 # app/llm/prompt_management.py
 """
-FAST‑V2 / FAST‑V3 HDAP‑SAFE Prompt Context Builder
-=================================================
+FAST‑V4 Topological Prompt Context Builder
+==========================================
 
 This version is **artifact‑first** and **protocol‑locked**.
 It removes all schema leakage (path/content, FILE labels, thinking blocks)
@@ -10,7 +10,7 @@ and guarantees that the LLM believes it is **writing files directly**.
 CORE PRINCIPLES (NON‑NEGOTIABLE):
 - The LLM sees **raw text only** — never structured file metadata
 - Files are treated as **world state**, not data structures
-- HDAP is enforced at the **protocol boundary**, not as a formatting hint
+- Protocol rules are enforced at the **protocol boundary**, not as a formatting hint
 - "Thinking" or planning output is explicitly FORBIDDEN
 """
 
@@ -28,8 +28,8 @@ def filter_files_for_step(
     if not files or not step:
         return {}
 
-    # 🔥 HDAP NORMALIZATION FIX
-    # Convert HDAP list format → dict[path -> content]
+    # 🔥 LIST NORMALIZATION FIX
+    # Convert list format → dict[path -> content]
     if isinstance(files, list):
         normalized: Dict[str, str] = {}
         for f in files:
@@ -146,7 +146,7 @@ def filter_files_for_step(
     return files
 
 # ------------------------------------------------------------------
-# CONTEXT BUILDER — HDAP‑SAFE
+# CONTEXT BUILDER — V4 SAFE
 # ------------------------------------------------------------------
 
 def build_context(
@@ -171,7 +171,7 @@ def build_context(
     - The LLM NEVER sees file metadata, schemas, path/content structures,
       or any representation that implies "files as data".
       
-    NOTE: ARTIFACT mode (HDAP) enforcement is now handled by enforce_artifact_mode().
+    NOTE: ARTIFACT mode enforcement is now handled by the cognitive engine.
     This function is only used for FREEFORM/STRUCTURED modes.
     """
 
