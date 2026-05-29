@@ -26,15 +26,16 @@ const Header: React.FC = () => {
               className="group flex items-center gap-3 focus:outline-none focus:ring-2 focus:ring-purple-500/40 rounded-lg"
               aria-label="GenxAI Studio Home"
             >
-              <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 via-violet-500 to-indigo-600 shadow-lg shadow-purple-500/25 transition-all duration-300 group-hover:shadow-purple-500/40 group-hover:scale-105 group-focus:scale-105">
-                <SparklesIcon className="h-5 w-5 text-white" aria-hidden="true" />
-                <div className="absolute inset-0 rounded-xl bg-white/20 opacity-0 transition-opacity group-hover:opacity-100" />
-              </div>
+              <img
+                src="/genxai_logo.png"
+                alt="GenxAI Logo"
+                className="h-8 w-auto object-contain transition-transform duration-300 group-hover:scale-105 group-focus:scale-105"
+              />
               <div className="flex flex-col">
-                <span className="text-lg font-bold bg-gradient-to-r from-white via-purple-200 to-violet-200 bg-clip-text text-transparent">
-                  GenCode
+                <span className="text-lg font-extrabold bg-gradient-to-r from-white via-cyan-200 to-violet-200 bg-clip-text text-transparent tracking-wide">
+                  GenxAI
                 </span>
-                <span className="text-[10px] font-medium tracking-wider text-zinc-500 uppercase -mt-0.5">
+                <span className="text-[10px] font-semibold tracking-widest text-cyan-400 uppercase -mt-0.5">
                   Studio
                 </span>
               </div>
