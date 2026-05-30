@@ -297,68 +297,14 @@ class ASTGenerator:
 
                 features = node.properties.get("features", [])
                 
-                # Check for other UI components to build a beautiful directory index in RootView
-                if comp_name == "RootView":
-                    other_ui_components = []
-                    for other_id, other_node in graph.nodes.items():
-                        if other_node.node_type == NodeType.UI_NODE:
-                            other_cname = other_node.properties.get("component_name")
-                            if other_cname and other_cname != "RootView":
-                                other_ui_components.append(other_cname)
-                    
-                    if other_ui_components:
-                        links_html = []
-                        for other_c in other_ui_components:
-                            links_html.append(
-                                f"      <a href='/{other_c.lower()}' className='flex items-center justify-between p-4 bg-slate-800/40 border border-slate-700/50 rounded-xl hover:bg-slate-800 hover:border-cyan-500/50 transition-all group'>\n"
-                                f"        <div>\n"
-                                f"          <div className='font-bold text-slate-200 group-hover:text-cyan-400 transition-colors'>{other_c}</div>\n"
-                                f"          <div className='text-xs text-slate-400 mt-1'>Click to open the {other_c} module</div>\n"
-                                f"        </div>\n"
-                                f"        <span className='text-slate-500 group-hover:text-cyan-400 transition-all transform group-hover:translate-x-1'>→</span>\n"
-                                f"      </a>"
-                            )
-                        links_jsx = "\n".join(links_html)
-                        
-                        jsx_payload = (
-                            f"<div className='min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-8'>\n"
-                            f"  <div className='max-w-4xl w-full bg-slate-900/50 border border-slate-800 rounded-2xl p-8 backdrop-blur-md shadow-2xl'>\n"
-                            f"    <h1 className='text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-500 mb-2'>\n"
-                            f"      {graph.project_id.replace('-', ' ').title()}\n"
-                            f"    </h1>\n"
-                            f"    <p className='text-slate-400 mb-8'>GenxAI V4 Cognitively Synthesized Application Portal</p>\n"
-                            f"    \n"
-                            f"    <h2 className='text-lg font-semibold text-slate-300 mb-4 flex items-center gap-2'>\n"
-                            f"      <span>🧭</span> Synthesized App Screens\n"
-                            f"    </h2>\n"
-                            f"    \n"
-                            f"    <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mb-8'>\n"
-                            f"{links_jsx}\n"
-                            f"    </div>\n"
-                            f"    \n"
-                            f"    <div className='border-t border-slate-800/80 pt-6 text-xs text-slate-500 flex justify-between items-center'>\n"
-                            f"      <span>Status: Active & Hydrated</span>\n"
-                            f"      <span>V4 Cognitive Engine</span>\n"
-                            f"    </div>\n"
-                            f"  </div>\n"
-                            f"</div>"
-                        )
-                    else:
-                        jsx_payload = (
-                            f"<div className='p-6 bg-slate-900 text-white rounded-lg shadow-xl'>\n"
-                            f"  <h1 className='text-2xl font-bold mb-4'>{comp_name} View</h1>\n"
-                            f"  <div className='text-sm text-slate-400'>Features: {', '.join(features)}</div>\n"
-                            f"  {{loading && <p className='text-cyan-400 mt-2'>Loading active stream...</p>}}\n"
-                            f"</div>"
-                        )
-                else:
-                    jsx_payload = (
-                        f"<div className='p-6 bg-slate-900 text-white rounded-lg shadow-xl'>\n"
-                        f"  <h1 className='text-2xl font-bold mb-4'>{comp_name} View</h1>\n"
-                        f"  <div className='text-sm text-slate-400'>Features: {', '.join(features)}</div>\n"
-                        f"  {{loading && <p className='text-cyan-400 mt-2'>Loading active stream...</p>}}\n"
-                        f"</div>"
-                    )
+                # Dynamic component payload generation (no RootView hardcoding)
+                jsx_payload = (
+                    f"<div className='p-6 bg-slate-900 text-white rounded-lg shadow-xl'>\n"
+                    f"  <h1 className='text-2xl font-bold mb-4'>{comp_name} View</h1>\n"
+                    f"  <div className='text-sm text-slate-400'>Features: {', '.join(features)}</div>\n"
+                    f"  {{loading && <p className='text-cyan-400 mt-2'>Loading active stream...</p>}}\n"
+                    f"</div>"
+                )
 
                 react_comp = ASTReactComponent(
                     name=comp_name,

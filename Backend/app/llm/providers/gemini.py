@@ -119,7 +119,7 @@ async def call(
     system_prompt: str = "",
     model: Optional[str] = None,
     temperature: float = 0.7,
-    max_tokens: int = 65536,
+    max_tokens: int = 2097152,
     stop_sequences: Optional[list] = None,
 ) -> dict:
     """
@@ -159,6 +159,10 @@ async def call(
     region = settings.llm.vertex_region
     vertex_model = _normalize_model(model)
     url = _build_vertex_url(project_id, region, vertex_model)
+
+    # Cap max_tokens to 65536 to prevent Gemini API 400 Bad Request error
+    if max_tokens > 65536:
+        max_tokens = 65536
 
     log("Gemini", f"→ Vertex AI [{region}] model={vertex_model} tokens={max_tokens}")
 

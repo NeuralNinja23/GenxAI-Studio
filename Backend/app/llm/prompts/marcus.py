@@ -63,6 +63,28 @@ Format:
       "derek": 0.0,
       "luna": 0.0
     }
+  },
+  "holistic_reviews": {
+    "code_review": {
+      "score": 0.90,
+      "comment": "Description of code structures and structural alignment."
+    },
+    "ux_review": {
+      "score": 0.85,
+      "comment": "Description of user experience flow, actions, and goal fulfillment."
+    },
+    "navigation_review": {
+      "score": 0.95,
+      "comment": "Description of route-to-screen mapping and journey layout."
+    },
+    "design_review": {
+      "score": 0.80,
+      "comment": "Description of design cohesiveness and component layout."
+    },
+    "accessibility_review": {
+      "score": 0.90,
+      "comment": "Description of accessibility hierarchy, contrast warnings, or input logic."
+    }
   }
 }
 """

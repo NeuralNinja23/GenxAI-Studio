@@ -1,0 +1,31 @@
+# Checklist — Sentinel Stabilization S-0 (Revised)
+
+- `[x]` S-0.1 SentinelVerificationGate Shell
+  - Define `SentinelVerificationGate` dataclass and core evaluation loops
+- `[x]` S-0.2 Verification Layer A: Dependency & Component Resolution
+  - Implement import paths/aliases resolve scan
+- `[x]` S-0.3 Verification Layer B: Schema Contract Matching
+  - Implement frontend props vs. Pydantic/Beanie schemas verification
+- `[ ]` S-0.4 Verification Layer C: State Binding Tracing
+  - Implement interactive triggers to state mutations path validation
+- `[ ]` S-0.5 Verification Layer D: Build Dry-Runs
+  - Implement backend `py_compile` and frontend mock builds
+- `[ ]` S-0.6 Verification Layer E: Runtime Page Render (Playwright)
+  - Implement container health check, Playwright body loads, and layout visual checks
+- `[ ]` S-0.6B Verification Layer F: Topology Integrity Verification
+  - Verify projected workflow graph matches intent graph
+  - Detect disconnected modules and missing business transitions
+- `[ ]` S-0.7 Dynamic Route Wiring Hardening & Fatal Abort
+  - Make dynamic routing errors throw fatal `WIRING_FAILURE` aborts
+- `[ ]` S-0.8 Failure Database & Taxonomy Expansion
+  - Expand `failure_geometry.py` schema with the new validation failures (including TOPOLOGY_INTEGRITY_FAILURE) and support logging `verification_stage` in FailureFingerprints
+- `[ ]` S-0.9 MemoryAccessLayer Decoupling
+  - Implement `MemoryAccessLayer` abstract repository interface to isolate SQLite/Mongo
+- `[ ]` S-0.10 Atomic Projector Transaction
+  - Re-engineer `ASTProjector` with staging directory and atomic commit/rollback mechanisms
+- `[ ]` S-0.11 Survival Metrics Reporting
+  - Add survival percentages (including topology_survival) in cycle metrics logs
+- `[ ]` S-0.12 Marcus V2 Grounding
+  - Clean up `MarcusGovernanceAnalyst` to review `VerificationResult` instead of raw code
+- `[ ]` S-0.13 Verification & E2E Validation Tests
+  - Create `test_verification_gate.py` asserting all gate classifications and rollback behavior

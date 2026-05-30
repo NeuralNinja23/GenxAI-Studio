@@ -93,7 +93,7 @@ class LLMAdapter:
         provider: Optional[str] = None,
         model: Optional[str] = None,
         temperature: float = 0.7,
-        max_tokens: int = 65536,
+        max_tokens: int = 2097152,
         stop_sequences: Optional[List[str]] = None,
         step_name: str = "",  # V2: For step-specific stop sequences
         return_usage: bool = False,  # V3: Return usage metadata for cost tracking
@@ -207,7 +207,7 @@ async def call_llm(
     provider: Optional[str] = None,
     model: Optional[str] = None,
     temperature: float = 0.7,
-    max_tokens: int = 65536,
+    max_tokens: int = 2097152,
     stop_sequences: Optional[List[str]] = None,
     step_name: str = "",  # V2: For step-specific stop sequences
 ) -> str:
@@ -231,7 +231,7 @@ async def call_llm_with_usage(
     provider: Optional[str] = None,
     model: Optional[str] = None,
     temperature: float = 0.7,
-    max_tokens: int = 65536,
+    max_tokens: int = 2097152,
     stop_sequences: Optional[List[str]] = None,
     step_name: str = "",
 ) -> LLMResponse:

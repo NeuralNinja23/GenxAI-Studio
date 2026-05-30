@@ -20,6 +20,8 @@ from app.llm.prompts import VICTORIA_PROMPT, DEREK_PROMPT, LUNA_PROMPT, MARCUS_P
 from app.llm.adapter import call_llm
 from app.sentinel.cognition.patch_ir_normalizer import PatchIRNormalizer
 from app.core.logging import log
+from pathlib import Path
+from app.sentinel.verification.verification_gate import SentinelVerificationGate
 
 
 def serialize_graph_for_llm(graph: ProjectTopologyGraph) -> str:
@@ -194,13 +196,27 @@ class MarcusGovernanceAnalyst:
     ) -> Dict[str, Any]:
         log("COGNITION", "Marcus Governance Conscience conducting structural checks...")
         
-        # Prepare evaluation profile
+        # Run verification gate on staging context to feed Marcus technical metrics
+        project_path = getattr(branch, "project_path", None) or Path(".")
+        verification = SentinelVerificationGate.verify(Path(project_path), branch.topology_graph)
+        
+        # Prepare evaluation profile based strictly on technical verification metrics
         raw_prompt = f"""
 Evaluate branch '{branch.branch_id}' converging with drift '{drift_severity}'.
 Repulsion Metric: {branch.repulsion_score}
 Entropy History: {branch.entropy_history}
 
-{serialize_graph_for_llm(branch.topology_graph)}
+TECHNICAL VERIFICATION METRICS:
+- Dependency Survival: {verification.dependency_survival * 100}%
+- Schema Survival: {verification.schema_survival * 100}%
+- State Binding Survival: {verification.state_binding_survival * 100}%
+- Build Survival: {verification.build_survival * 100}%
+- Runtime Survival: {verification.runtime_survival * 100}%
+- Visual Survival: {verification.visual_survival * 100}%
+- Topology Survival: {verification.topology_survival * 100}%
+
+Integrated Verification Score: {verification.verification_score}
+Gate Recommendation: {verification.recommendation}
 """
         # Default fallback
         governance_result = {
@@ -243,6 +259,32 @@ Entropy History: {branch.entropy_history}
             governance_result["warnings"] = warnings
             governance_result["is_stable"] = decision != "REJECT"
 
+            # Parse Phase 10 Holistic Review Scores
+            default_holistic = {
+                "code_review": {"score": 1.0, "comment": "Baseline clean code review."},
+                "ux_review": {"score": 1.0, "comment": "Baseline clean UX flow structure."},
+                "navigation_review": {"score": 1.0, "comment": "Baseline coherent route paths."},
+                "design_review": {"score": 1.0, "comment": "Baseline clean layout alignment."},
+                "accessibility_review": {"score": 1.0, "comment": "Baseline accessible component boundaries."}
+            }
+            
+            holistic = parsed.get("holistic_reviews") or {}
+            for key in default_holistic.keys():
+                if key not in holistic or not isinstance(holistic[key], dict):
+                    holistic[key] = default_holistic[key]
+                else:
+                    if "score" not in holistic[key]:
+                        holistic[key]["score"] = default_holistic[key]["score"]
+                    else:
+                        try:
+                            holistic[key]["score"] = float(holistic[key]["score"])
+                        except Exception:
+                            holistic[key]["score"] = default_holistic[key]["score"]
+                    if "comment" not in holistic[key]:
+                        holistic[key]["comment"] = default_holistic[key]["comment"]
+            
+            governance_result["holistic_reviews"] = holistic
+
         except Exception as e:
             log("COGNITION", f"⚠️ Marcus analysis failure: {e}. Falling back to baseline calculations.")
             
@@ -266,5 +308,14 @@ Entropy History: {branch.entropy_history}
             governance_result["marcus_advisory_modifier"] = modifier
             governance_result["warnings"] = warnings
             governance_result["is_stable"] = is_stable
+            
+            # Phase 10 Deterministic Fallback Holistic Review Scores
+            governance_result["holistic_reviews"] = {
+                "code_review": {"score": modifier, "comment": "Deterministic backup code review."},
+                "ux_review": {"score": modifier, "comment": "Deterministic backup UX flow review."},
+                "navigation_review": {"score": modifier, "comment": "Deterministic backup navigation review."},
+                "design_review": {"score": modifier, "comment": "Deterministic backup design review."},
+                "accessibility_review": {"score": modifier, "comment": "Deterministic backup accessibility review."}
+            }
 
         return governance_result

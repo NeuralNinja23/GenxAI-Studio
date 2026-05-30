@@ -1,26 +1,27 @@
 # app/sentinel/failure_memory/failure_geometry.py
-import sqlite3
-import json
+"""
+FailureGeometry (S-0.8)
+Hardened S-0 failure coordinate encoding engine integrated with MemoryAccessLayer.
+"""
+
 import numpy as np
+from typing import Dict, List, Tuple, Any, Optional
+from pathlib import Path
+
+from app.sentinel.failure_memory.memory_access_layer import MemoryAccessLayer
+
 
 class FailureGeometry:
-    def __init__(self, db_path: str):
-        self.db_path = db_path
-        self._init_db()
+    """
+    Decoupled vector encoding and failure geometry coordinator.
+    """
 
-    def _init_db(self):
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS failure_memory (
-                    failure_id TEXT PRIMARY KEY,
-                    vector TEXT NOT NULL,
-                    error_class TEXT,
-                    cycle_id TEXT,
-                    details TEXT
-                )
-            """)
-            conn.commit()
+    def __init__(self, db_path: Optional[str] = None):
+        self.mal = MemoryAccessLayer(db_path)
+
+    @property
+    def db_path(self) -> Path:
+        return self.mal.db_path
 
     @classmethod
     def encode_failure(
@@ -37,31 +38,34 @@ class FailureGeometry:
     ) -> np.ndarray:
         # structural_instability
         structural_instability = 0.0
-        if is_cyclic:
+        if is_cyclic or error_class == "TOPOLOGY_INTEGRITY_FAILURE":
             structural_instability += 2.0
-        if error_class == "topology":
+        if error_class in ("topology", "TOPOLOGY_INTEGRITY_FAILURE", "WIRING_FAILURE"):
             structural_instability += 0.5
         if mutation_tier >= 4:
             structural_instability += 0.3
 
-        # visual_density (tuned parameter weight of 0.25)
-        # Visual density raw: ui_node_count relative to total nodes, scaled by 0.25 weight
+        # visual_density
         total_nodes = max(1, node_count)
         visual_density_raw = ui_node_count / total_nodes
         visual_density = 0.25 * visual_density_raw
+        if error_class == "VISUAL_RENDER_FAILURE":
+            visual_density += 0.5
 
         # semantic_incoherence
         semantic_incoherence = (api_node_count + schema_node_count) / total_nodes
-        if error_class in ("semantic", "conflict"):
+        if error_class in ("semantic", "conflict", "SCHEMA_CONTRACT_FAILURE", "UNRESOLVED_IMPORT_FAILURE"):
             semantic_incoherence += 0.5
 
         # runtime_instability
         runtime_instability = mutation_tier / 5.0
-        if error_class == "runtime":
+        if error_class in ("runtime", "FRONTEND_BUILD_FAILURE", "BACKEND_BUILD_FAILURE", "RUNTIME_BOOT_FAILURE", "HEALTH_CHECK_FAILURE"):
             runtime_instability += 0.5
 
         # ux_entropy
         ux_entropy = min(1.0, error_len / 1000.0)
+        if error_class == "STATE_BINDING_FAILURE":
+            ux_entropy += 0.4
 
         vec = np.array([
             structural_instability,
@@ -92,27 +96,32 @@ class FailureGeometry:
         vector: np.ndarray,
         error_class: str = "",
         cycle_id: str = "",
-        details: str = ""
+        details: str = "",
+        verification_stage: Optional[str] = None,
+        error_field: Optional[str] = None,
+        error_file: Optional[str] = None,
+        error_component: Optional[str] = None
     ):
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "INSERT OR REPLACE INTO failure_memory (failure_id, vector, error_class, cycle_id, details) VALUES (?, ?, ?, ?, ?)",
-                (failure_id, json.dumps(vector.tolist()), error_class, cycle_id, details)
-            )
-            conn.commit()
+        """Atomically forwards S-0 error detail profiles to MemoryAccessLayer."""
+        self.mal.insert_failure_record(
+            failure_id=failure_id,
+            vector=vector,
+            error_class=error_class,
+            cycle_id=cycle_id,
+            details=details,
+            verification_stage=verification_stage,
+            error_field=error_field,
+            error_file=error_file,
+            error_component=error_component
+        )
 
     def get_all_failures(self) -> list:
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT failure_id, vector, error_class, cycle_id, details FROM failure_memory")
-            rows = cursor.fetchall()
-            res = []
-            for row in rows:
-                f_id, vec_str, err_class, cyc_id, details = row
-                vec = np.array(json.loads(vec_str), dtype=float)
-                res.append((f_id, vec, err_class, cyc_id, details))
-            return res
+        records = self.mal.load_all_records()
+        res = []
+        for r in records:
+            # Reconstruct legacy FailureGeometry output tuple (f_id, vec, err_class, cyc_id, details)
+            res.append((r[0], r[1], r[2], r[3], r[4]))
+        return res
 
 
 class TopologyHeatMap:
@@ -172,4 +181,3 @@ class TopologyHeatMap:
             adjusted["stabilization_priority"] = max(1, base_physics.stabilization_priority - 1)
 
         return adjusted
-

@@ -42,6 +42,8 @@ class TopologyDomain(str, Enum):
     DATA_DOMAIN     = "DATA_DOMAIN"
     SECURITY_DOMAIN = "SECURITY_DOMAIN"
     RUNTIME_DOMAIN  = "RUNTIME_DOMAIN"
+    EXPERIENCE_DOMAIN = "EXPERIENCE_DOMAIN"
+    ONTOLOGY_DOMAIN = "ONTOLOGY_DOMAIN"
 
 
 class DomainPhysics(BaseModel):
@@ -94,6 +96,24 @@ class NodeType(str, Enum):
     DEPLOYMENT_NODE = "DEPLOYMENT_NODE"
     CONTRACT_NODE = "CONTRACT_NODE"
     AST_NODE = "AST_NODE"
+
+    EXPERIENCE_NODE = "EXPERIENCE_NODE"
+    GOAL_NODE = "GOAL_NODE"
+    JOURNEY_NODE = "JOURNEY_NODE"
+    FLOW_NODE = "FLOW_NODE"
+    SCREEN_NODE = "SCREEN_NODE"
+    ACTION_NODE = "ACTION_NODE"
+
+    ENTITY_NODE = "ENTITY_NODE"
+    ROLE_NODE = "ROLE_NODE"
+    RELATIONSHIP_NODE = "RELATIONSHIP_NODE"
+    CAPABILITY_NODE = "CAPABILITY_NODE"
+    ONTOLOGY_WORKFLOW_NODE = "ONTOLOGY_WORKFLOW_NODE"
+
+    WORKSPACE_NODE = "WORKSPACE_NODE"
+    PAGE_NODE = "PAGE_NODE"
+    FEATURE_NODE = "FEATURE_NODE"
+    NAV_LAYOUT_NODE = "NAV_LAYOUT_NODE"
 
 
 class CapabilityBoundary(BaseModel):
@@ -150,9 +170,166 @@ class NodeOntology:
             compression_eligible=False,
             stabilization_priority=1
         ),
+        TopologyDomain.EXPERIENCE_DOMAIN: DomainPhysics(
+            repulsion_threshold=0.70,     # Conservative baseline for Phase 7
+            density_tolerance=0.60,       # Similar to DATA_DOMAIN initially
+            max_nodes_soft_cap=25,
+            compression_eligible=True,
+            stabilization_priority=4      # Important but not security-critical
+        ),
+        TopologyDomain.ONTOLOGY_DOMAIN: DomainPhysics(
+            repulsion_threshold=0.70,     # Conservative baseline
+            density_tolerance=0.60,
+            max_nodes_soft_cap=25,
+            compression_eligible=True,
+            stabilization_priority=4
+        ),
     }
 
     ONTOLOGY: Dict[NodeType, Dict[str, Any]] = {
+        NodeType.EXPERIENCE_NODE: {
+            "domain": TopologyDomain.EXPERIENCE_DOMAIN,
+            "max_mutation_tier": MutationTier.TOPOLOGY,
+            "boundary": CapabilityBoundary(
+                allowed_proposers={"Sentinel"},
+                allowed_validators={"topology_oracle"}
+            ),
+            "projection": ProjectionLegality(
+                allowed_file_patterns=[],
+                forbidden_file_patterns=["*"],  # In Memory Only
+                target_format="json"
+            )
+        },
+        NodeType.ENTITY_NODE: {
+            "domain": TopologyDomain.ONTOLOGY_DOMAIN,
+            "max_mutation_tier": MutationTier.TOPOLOGY,
+            "boundary": CapabilityBoundary(
+                allowed_proposers={"Sentinel"},
+                allowed_validators={"topology_oracle"}
+            ),
+            "projection": ProjectionLegality(
+                allowed_file_patterns=[],
+                forbidden_file_patterns=["*"],  # In Memory Only
+                target_format="json"
+            )
+        },
+        NodeType.ROLE_NODE: {
+            "domain": TopologyDomain.ONTOLOGY_DOMAIN,
+            "max_mutation_tier": MutationTier.TOPOLOGY,
+            "boundary": CapabilityBoundary(
+                allowed_proposers={"Sentinel"},
+                allowed_validators={"topology_oracle"}
+            ),
+            "projection": ProjectionLegality(
+                allowed_file_patterns=[],
+                forbidden_file_patterns=["*"],  # In Memory Only
+                target_format="json"
+            )
+        },
+        NodeType.RELATIONSHIP_NODE: {
+            "domain": TopologyDomain.ONTOLOGY_DOMAIN,
+            "max_mutation_tier": MutationTier.TOPOLOGY,
+            "boundary": CapabilityBoundary(
+                allowed_proposers={"Sentinel"},
+                allowed_validators={"topology_oracle"}
+            ),
+            "projection": ProjectionLegality(
+                allowed_file_patterns=[],
+                forbidden_file_patterns=["*"],  # In Memory Only
+                target_format="json"
+            )
+        },
+        NodeType.CAPABILITY_NODE: {
+            "domain": TopologyDomain.ONTOLOGY_DOMAIN,
+            "max_mutation_tier": MutationTier.TOPOLOGY,
+            "boundary": CapabilityBoundary(
+                allowed_proposers={"Sentinel"},
+                allowed_validators={"topology_oracle"}
+            ),
+            "projection": ProjectionLegality(
+                allowed_file_patterns=[],
+                forbidden_file_patterns=["*"],  # In Memory Only
+                target_format="json"
+            )
+        },
+        NodeType.ONTOLOGY_WORKFLOW_NODE: {
+            "domain": TopologyDomain.ONTOLOGY_DOMAIN,
+            "max_mutation_tier": MutationTier.TOPOLOGY,
+            "boundary": CapabilityBoundary(
+                allowed_proposers={"Sentinel"},
+                allowed_validators={"topology_oracle"}
+            ),
+            "projection": ProjectionLegality(
+                allowed_file_patterns=[],
+                forbidden_file_patterns=["*"],  # In Memory Only
+                target_format="json"
+            )
+        },
+        NodeType.GOAL_NODE: {
+            "domain": TopologyDomain.EXPERIENCE_DOMAIN,
+            "max_mutation_tier": MutationTier.TOPOLOGY,
+            "boundary": CapabilityBoundary(
+                allowed_proposers={"Sentinel"},
+                allowed_validators={"topology_oracle"}
+            ),
+            "projection": ProjectionLegality(
+                allowed_file_patterns=[],
+                forbidden_file_patterns=["*"],
+                target_format="json"
+            )
+        },
+        NodeType.JOURNEY_NODE: {
+            "domain": TopologyDomain.EXPERIENCE_DOMAIN,
+            "max_mutation_tier": MutationTier.TOPOLOGY,
+            "boundary": CapabilityBoundary(
+                allowed_proposers={"Sentinel"},
+                allowed_validators={"topology_oracle"}
+            ),
+            "projection": ProjectionLegality(
+                allowed_file_patterns=[],
+                forbidden_file_patterns=["*"],
+                target_format="json"
+            )
+        },
+        NodeType.FLOW_NODE: {
+            "domain": TopologyDomain.EXPERIENCE_DOMAIN,
+            "max_mutation_tier": MutationTier.TOPOLOGY,
+            "boundary": CapabilityBoundary(
+                allowed_proposers={"Sentinel"},
+                allowed_validators={"topology_oracle"}
+            ),
+            "projection": ProjectionLegality(
+                allowed_file_patterns=[],
+                forbidden_file_patterns=["*"],
+                target_format="json"
+            )
+        },
+        NodeType.SCREEN_NODE: {
+            "domain": TopologyDomain.EXPERIENCE_DOMAIN,
+            "max_mutation_tier": MutationTier.TOPOLOGY,
+            "boundary": CapabilityBoundary(
+                allowed_proposers={"Sentinel"},
+                allowed_validators={"topology_oracle"}
+            ),
+            "projection": ProjectionLegality(
+                allowed_file_patterns=[],
+                forbidden_file_patterns=["*"],
+                target_format="json"
+            )
+        },
+        NodeType.ACTION_NODE: {
+            "domain": TopologyDomain.EXPERIENCE_DOMAIN,
+            "max_mutation_tier": MutationTier.TOPOLOGY,
+            "boundary": CapabilityBoundary(
+                allowed_proposers={"Sentinel"},
+                allowed_validators={"topology_oracle"}
+            ),
+            "projection": ProjectionLegality(
+                allowed_file_patterns=[],
+                forbidden_file_patterns=["*"],
+                target_format="json"
+            )
+        },
         NodeType.API_NODE: {
             "domain": TopologyDomain.DATA_DOMAIN,
             "max_mutation_tier": MutationTier.TOPOLOGY,
@@ -177,6 +354,58 @@ class NodeOntology:
                 allowed_file_patterns=["Backend/app/models/**/*.py"],
                 forbidden_file_patterns=["Backend/app/runtime/**/*.py"],
                 target_format="python"
+            )
+        },
+        NodeType.WORKSPACE_NODE: {
+            "domain": TopologyDomain.UI_DOMAIN,
+            "max_mutation_tier": MutationTier.TOPOLOGY,
+            "boundary": CapabilityBoundary(
+                allowed_proposers={"Sentinel"},
+                allowed_validators={"topology_oracle"}
+            ),
+            "projection": ProjectionLegality(
+                allowed_file_patterns=[],
+                forbidden_file_patterns=["*"],  # In Memory Only
+                target_format="json"
+            )
+        },
+        NodeType.PAGE_NODE: {
+            "domain": TopologyDomain.UI_DOMAIN,
+            "max_mutation_tier": MutationTier.TOPOLOGY,
+            "boundary": CapabilityBoundary(
+                allowed_proposers={"Sentinel"},
+                allowed_validators={"topology_oracle"}
+            ),
+            "projection": ProjectionLegality(
+                allowed_file_patterns=[],
+                forbidden_file_patterns=["*"],  # In Memory Only
+                target_format="json"
+            )
+        },
+        NodeType.FEATURE_NODE: {
+            "domain": TopologyDomain.UI_DOMAIN,
+            "max_mutation_tier": MutationTier.TOPOLOGY,
+            "boundary": CapabilityBoundary(
+                allowed_proposers={"Sentinel"},
+                allowed_validators={"topology_oracle"}
+            ),
+            "projection": ProjectionLegality(
+                allowed_file_patterns=[],
+                forbidden_file_patterns=["*"],  # In Memory Only
+                target_format="json"
+            )
+        },
+        NodeType.NAV_LAYOUT_NODE: {
+            "domain": TopologyDomain.UI_DOMAIN,
+            "max_mutation_tier": MutationTier.TOPOLOGY,
+            "boundary": CapabilityBoundary(
+                allowed_proposers={"Sentinel"},
+                allowed_validators={"topology_oracle"}
+            ),
+            "projection": ProjectionLegality(
+                allowed_file_patterns=[],
+                forbidden_file_patterns=["*"],  # In Memory Only
+                target_format="json"
             )
         },
         NodeType.UI_NODE: {

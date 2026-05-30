@@ -1,0 +1,92 @@
+# app/studio/architecture/design_system.py
+"""
+V4 GenxAI Studio — Phase GS-4: DesignSystemGraph
+
+Represents abstract, framework-agnostic design system tokens and rules.
+Guarantees complete isolation from visual variables and physical colors,
+reasoning purely in palette characteristics, scale limits, and motion bounds.
+"""
+
+from typing import Dict, Any, Optional
+from app.sentinel.topology.project_graph import ProjectTopologyGraph, TopologyNode
+from app.sentinel.topology.node_types import NodeType
+from app.studio.architecture.information_graph import StudioNodeType
+
+# Local Studio Design System Node Types
+STUDIO_DESIGN_SYSTEM_NODE = "DESIGN_SYSTEM_NODE"
+STUDIO_COLOR_CHARACTERISTICS_NODE = "COLOR_CHARACTERISTICS_NODE"
+STUDIO_TYPOGRAPHY_TOKEN_NODE = "TYPOGRAPHY_TOKEN_NODE"
+STUDIO_SPACING_TOKEN_NODE = "SPACING_TOKEN_NODE"
+STUDIO_MOTION_TOKEN_NODE = "MOTION_TOKEN_NODE"
+STUDIO_COMPONENT_RULES_NODE = "COMPONENT_RULES_NODE"
+
+class DesignSystemGraph(ProjectTopologyGraph):
+    """
+    In-memory representation of design token rules and characteristics.
+    This graph is framework-agnostic and remains abstract.
+    """
+    
+    def __init__(self, **data: Any):
+        super().__init__(**data)
+
+    def add_node(self, node_id: str, node_type: Any, properties: Optional[Dict[str, Any]] = None) -> TopologyNode:
+        """
+        Override to allow local Studio design system node types alongside other graphs.
+        Bypasses core Sentinel enum validation constraints.
+        """
+        studio_system_types = (
+            STUDIO_DESIGN_SYSTEM_NODE,
+            STUDIO_COLOR_CHARACTERISTICS_NODE,
+            STUDIO_TYPOGRAPHY_TOKEN_NODE,
+            STUDIO_SPACING_TOKEN_NODE,
+            STUDIO_MOTION_TOKEN_NODE,
+            STUDIO_COMPONENT_RULES_NODE
+        )
+        
+        is_studio_system = str(node_type) in studio_system_types
+        is_sentinel_node = False
+        try:
+            is_sentinel_node = node_type in NodeType.__members__.values()
+        except Exception:
+            pass
+
+        # Allow parent design intent node types as references
+        is_design_intent_type = str(node_type) in ("DESIGN_INTENT_NODE", "GLOBAL_INTENT_NODE")
+
+        if not (is_studio_system or is_sentinel_node or is_design_intent_type):
+            raise ValueError(f"Invalid Node Type in DesignSystemGraph: {node_type}")
+
+        # Construct TopologyNode using construct() to bypass strict Pydantic Enum validation if it's a Studio node type
+        if is_studio_system or is_design_intent_type:
+            node_type_val = StudioNodeType(node_type)
+            node = TopologyNode.construct(
+                node_id=node_id,
+                node_type=node_type_val,
+                properties=properties or {}
+            )
+        else:
+            node = TopologyNode(
+                node_id=node_id,
+                node_type=node_type,
+                properties=properties or {}
+            )
+            
+        node.update_integrity()
+        self.nodes[node_id] = node
+        self.update_graph_hash()
+        return node
+
+    def add_system_node(self, node_id: str, node_type: str, properties: Optional[Dict[str, Any]] = None) -> None:
+        """Helper to add only design system domain nodes."""
+        studio_system_types = (
+            STUDIO_DESIGN_SYSTEM_NODE,
+            STUDIO_COLOR_CHARACTERISTICS_NODE,
+            STUDIO_TYPOGRAPHY_TOKEN_NODE,
+            STUDIO_SPACING_TOKEN_NODE,
+            STUDIO_MOTION_TOKEN_NODE,
+            STUDIO_COMPONENT_RULES_NODE
+        )
+        if node_type not in studio_system_types:
+            raise ValueError(f"Cannot add non-design-system node {node_type} to DesignSystemGraph.")
+        
+        self.add_node(node_id, node_type, properties)
