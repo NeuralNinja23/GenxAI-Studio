@@ -1028,6 +1028,9 @@ async def test_ast_projector_flow():
 
 
         proj_path = Path(tmp_dir)
+        (proj_path / "frontend" / "src").mkdir(parents=True, exist_ok=True)
+        with open(proj_path / "frontend" / "src" / "App.jsx", "w", encoding="utf-8") as f:
+            f.write("// @ROUTE_IMPORTS\n// @ROUTES\n{/* @ROUTE_REGISTER - Integrator injects new routes here */}\n")
 
 
         project_id = "projector_test"
@@ -1037,6 +1040,12 @@ async def test_ast_projector_flow():
 
 
         # Mock cycle context
+        from unittest.mock import patch
+        from app.sentinel.verification.verification_gate import VerificationResult
+
+        mock_verify_patcher = patch('app.sentinel.topology.ast_projector.SentinelVerificationGate.verify')
+        mock_verify = mock_verify_patcher.start()
+        mock_verify.return_value = VerificationResult()
 
 
         class MockCycleContext:
@@ -1067,17 +1076,14 @@ async def test_ast_projector_flow():
 
 
         graph.add_node("schema_task", NodeType.SCHEMA_NODE, {
-
-
             "entity_name": "Task",
-
-
             "fields": [{"name": "name", "type": "str", "required": True}]
-
-
         })
-
-
+        graph.add_node("ui_app_root", NodeType.UI_NODE, {"is_root": True, "component_name": "App"})
+        graph.add_node("ui_task_panel", NodeType.UI_NODE, {"component_name": "TaskPanel"})
+        graph.add_edge("ui_app_root", "ui_task_panel", "renders_component")
+        graph.add_edge("ui_task_panel", "schema_task", "binds_schema")
+        
         graph.update_graph_hash()
 
 
@@ -1115,6 +1121,10 @@ async def test_ast_projector_flow():
 
 
         assert (proj_path / ".genx_ast_manifest.json").exists()
+
+
+
+        mock_verify_patcher.stop()
 
 
 

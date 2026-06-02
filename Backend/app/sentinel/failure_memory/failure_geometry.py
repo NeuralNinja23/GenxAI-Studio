@@ -38,7 +38,7 @@ class FailureGeometry:
     ) -> np.ndarray:
         # structural_instability
         structural_instability = 0.0
-        if is_cyclic or error_class == "TOPOLOGY_INTEGRITY_FAILURE":
+        if is_cyclic or error_class in ("TOPOLOGY_INTEGRITY_FAILURE", "WIRING_FAILURE"):
             structural_instability += 2.0
         if error_class in ("topology", "TOPOLOGY_INTEGRITY_FAILURE", "WIRING_FAILURE"):
             structural_instability += 0.5
@@ -61,11 +61,15 @@ class FailureGeometry:
         runtime_instability = mutation_tier / 5.0
         if error_class in ("runtime", "FRONTEND_BUILD_FAILURE", "BACKEND_BUILD_FAILURE", "RUNTIME_BOOT_FAILURE", "HEALTH_CHECK_FAILURE"):
             runtime_instability += 0.5
+        if error_class == "WIRING_FAILURE":
+            runtime_instability += 0.2
 
         # ux_entropy
         ux_entropy = min(1.0, error_len / 1000.0)
         if error_class == "STATE_BINDING_FAILURE":
             ux_entropy += 0.4
+        if error_class == "TOPOLOGY_INTEGRITY_FAILURE":
+            ux_entropy += 0.1
 
         vec = np.array([
             structural_instability,

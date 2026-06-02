@@ -235,7 +235,7 @@ def wire_frontend_routes(project_path: Path, graph) -> bool:
     app_path = project_path / "frontend" / "src" / "App.jsx"
     if not app_path.exists():
         log("WIRING", f"⚠️ App.jsx not found at {app_path}")
-        raise WiringException(f"App.jsx not found at {app_path}")
+        raise WiringException(f"WIRING_FAILURE: App.jsx not found at {app_path}")
 
     content = app_path.read_text(encoding="utf-8")
     original_content = content
@@ -246,7 +246,9 @@ def wire_frontend_routes(project_path: Path, graph) -> bool:
     for node in ui_nodes:
         comp_name = node.properties.get("component_name")
         if not comp_name:
-            continue
+            raise WiringException(
+                f"WIRING_FAILURE: UI node {getattr(node, 'node_id', '<unknown>')} is missing component_name"
+            )
         
         # Imports
         imp = f"import {comp_name} from \"@/components/{comp_name}\";"
@@ -268,7 +270,9 @@ def wire_frontend_routes(project_path: Path, graph) -> bool:
         if "// @ROUTE_IMPORTS" in content:
             content = content.replace("// @ROUTE_IMPORTS", f"// @ROUTE_IMPORTS\n{new_imports}")
         else:
-            content = new_imports + "\n" + content
+            raise WiringException(
+                "WIRING_FAILURE: Route import marker '// @ROUTE_IMPORTS' not found in App.jsx"
+            )
 
     if route_lines:
         new_routes = "\n".join(route_lines)
@@ -276,10 +280,25 @@ def wire_frontend_routes(project_path: Path, graph) -> bool:
         if register_marker in content:
             content = content.replace(register_marker, f"{register_marker}\n{new_routes}")
         else:
-            content = content.replace("</Routes>", f"{new_routes}\n                </Routes>")
+            raise WiringException(
+                "WIRING_FAILURE: Route registration marker '{/* @ROUTE_REGISTER - Integrator injects new routes here */}' not found in App.jsx"
+            )
 
     if content != original_content:
         app_path.write_text(content, encoding="utf-8")
+
+        written = app_path.read_text(encoding="utf-8")
+        missing_routes = [
+            node.properties.get("component_name")
+            for node in ui_nodes
+            if node.properties.get("component_name")
+            and f'element={{<{node.properties.get("component_name")} />}}' not in written
+        ]
+        if missing_routes:
+            raise WiringException(
+                f"WIRING_FAILURE: Frontend route wiring incomplete for {', '.join(missing_routes)}"
+            )
+
         log("WIRING", f"✅ Successfully wired {len(ui_nodes)} frontend routes into App.jsx")
         return True
 

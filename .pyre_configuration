@@ -1,5 +1,0 @@
-{
-  "source_directories": ["Backend/app"],
-  "search_path": ["Backend"],
-  "python_version": "3.11"
-}

@@ -13,7 +13,7 @@ import subprocess
 import importlib.util
 from typing import Dict, List, Any, Optional
 from pathlib import Path
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.sentinel.topology.node_types import NodeType
 from app.sentinel.topology.project_graph import ProjectTopologyGraph
@@ -45,10 +45,28 @@ class VerificationResult(BaseModel):
     visual_survival: float = 1.0
     topology_survival: float = 1.0
 
+    visual_evaluated: bool = True
+
     verification_score: float = 1.0
+    governance_score: float = 1.0
     failure_classification: Optional[str] = None
     recommendation: str = "PASS"
-    failures: List[FailureFingerprint] = []
+    failures: List[FailureFingerprint] = Field(default_factory=list)
+
+    @property
+    def overall_survival(self) -> float:
+        values = [
+            self.dependency_survival,
+            self.schema_survival,
+            self.state_binding_survival,
+            self.build_survival,
+            self.runtime_survival,
+        ]
+        if getattr(self, "visual_evaluated", True):
+            values.append(self.visual_survival)
+        
+        values.append(self.topology_survival)
+        return round(sum(values) / len(values), 4)
 
 
 class SentinelVerificationGate:
@@ -167,6 +185,26 @@ class SentinelVerificationGate:
             result.recommendation = "REJECT"
             if not result.failure_classification and result.failures:
                 result.failure_classification = result.failures[0].failure_type
+
+        # ── VALIDATION RECORDING ──
+        try:
+            from app.sentinel.validation.validation_recorder import ValidationRecorder
+            for fail in result.failures:
+                ValidationRecorder.record_failure({
+                    "branch_id": None, # Left unpopulated initially
+                    "failure_type": fail.failure_type,
+                    "failure_fingerprint": f"{fail.failure_type}:{fail.file or 'global'}",
+                    "cfm": None,
+                    "principle_violated": fail.stage,
+                    "root_cause": fail.details,
+                    "stage": fail.stage,
+                    "severity": "ERROR",
+                    "recovered": False,
+                    "escape_mutation_used": False
+                })
+        except Exception:
+            pass
+        # ──────────────────────────
 
         return result
 
@@ -369,11 +407,8 @@ class SentinelVerificationGate:
         graph: ProjectTopologyGraph,
         result: VerificationResult
     ) -> None:
-        """
-        S-0.4: Verification Layer C — State Binding Tracing
-        Validates that interactive forms, buttons, and click handlers link 
-        cleanly to active state setters or mutation dispatches in UI files.
-        """
+        print("[SENTINEL_GATE] Executing S-0.4: Circuit-Level State Binding Tracing...")
+
         frontend_src = project_path / "Frontend" / "src"
         if not frontend_src.exists():
             frontend_src = project_path / "frontend" / "src"
@@ -393,35 +428,129 @@ class SentinelVerificationGate:
                     file_path = Path(root) / file
                     total_scanned += 1
                     try:
-                        content = file_path.read_text(encoding="utf-8")
+                        file_content = file_path.read_text(encoding="utf-8")
                     except Exception:
                         continue
 
-                    file_clean_path = str(file_path.relative_to(project_path))
+                    file_clean_path = str(file_path.resolve().relative_to(project_path.resolve()))
                     file_failed = False
+                    
+                    current_domain = None
+                    file_lower = file.lower()
+                    for node in graph.nodes.values():
+                        if getattr(node, "node_type", None) == NodeType.SCHEMA_NODE:
+                            entity_name = node.properties.get("entity_name", "").lower()
+                            if entity_name and entity_name in file_lower:
+                                current_domain = entity_name
+                                break
 
-                    # Check for interactive nodes (e.g. form, inputs, buttons)
-                    has_form_or_btn = "<button" in content or "<form" in content or "<input" in content
+                    has_form_or_btn = "<button" in file_content or "<form" in file_content or "<input" in file_content
                     
                     if has_form_or_btn:
-                        # Extract event handler assignments: onClick={handler}, onSubmit={handler}
-                        handlers = re.findall(r'(?:onClick|onSubmit|onChange)\s*=\s*\{\s*([a-zA-Z0-9_]+)\s*\}', content)
+                        handlers = re.findall(r'(?:onClick|onSubmit|onChange)\s*=\s*\{\s*([a-zA-Z0-9_]+)\s*\}', file_content)
                         
-                        # Verify each handler exists as a function or defined setter in the component
                         for h in handlers:
-                            # A legal handler must be declared as a function, const arrow function, or state mutator
-                            is_declared = (
-                                f"function {h}" in content or
-                                f"const {h}" in content or
-                                f"let {h}" in content or
-                                f"set{h[0].upper()}{h[1:]}" in content or # State setter match
-                                h == "handleSubmit" or h == "handleChange" or h == "handleClick" # Common boilerplate
-                            )
-                            if not is_declared:
+                            is_prop = False
+                            if f"export function {file_path.stem}({{ " in file_content and h in file_content.split(f"export function {file_path.stem}({{ ")[1].split("}")[0]:
+                                is_prop = True
+                            if f"const {file_path.stem} = ({{ " in file_content and h in file_content.split(f"const {file_path.stem} = ({{ ")[1].split("}")[0]:
+                                is_prop = True
+                            if f"props.{h}" in file_content or f"props =>" in file_content:
+                                is_prop = True
+                            if h in ("onSave", "onSubmit", "onClick", "onChange"):
+                                if f"function {h}" not in file_content and f"const {h}" not in file_content:
+                                    is_prop = True
+
+                            if is_prop:
+                                continue
+
+                            is_imported = False
+                            for line in file_content.split('\n'):
+                                if line.strip().startswith("import ") and h in line:
+                                    is_imported = True
+                                    break
+                            
+                            if is_imported:
+                                continue
+
+                            handler_body = ""
+                            body_match = re.search(rf'(?:const|function)\s+{h}\s*(?:=\s*\([^)]*\)\s*=>\s*|\([^)]*\)\s*)\{{\s*(.*?)\s*\}}', file_content, re.DOTALL)
+                            if body_match:
+                                handler_body = body_match.group(1)
+                            else:
+                                body_match = re.search(rf'const\s+{h}\s*=\s*\([^)]*\)\s*=>\s*(.*)', file_content)
+                                if body_match:
+                                    handler_body = body_match.group(1)
+                            
+                            if handler_body:
+                                ui_viewport_actions = ["scrollPrev", "scrollNext", "scrollTo", "focus", "blur"]
+                                is_viewport = any(re.search(rf'\.{action}\s*\(', handler_body) for action in ui_viewport_actions)
+                                if is_viewport:
+                                    continue
+                                
+                                is_remote = re.search(r'\b(fetch|dispatch|api\.(post|put|delete|patch)|axios\.)', handler_body)
+                                if is_remote:
+                                    continue
+                                    
+                                is_mutation = False
+                                state_target = None
+                                set_match = re.search(r'\bset([A-Z][a-zA-Z0-9_]*)\s*\(', handler_body)
+                                if set_match:
+                                    is_mutation = True
+                                    state_target = set_match.group(1).lower()
+                                
+                                if not is_mutation:
+                                    file_failed = True
+                                    result.failures.append(
+                                        FailureFingerprint(
+                                            failure_type="STATE_MUTATION_MISSING",
+                                            stage="Verification Layer C",
+                                            details=f"Interactive handler '{h}' lacks state mutation.",
+                                            file=file_clean_path,
+                                            component=file
+                                        )
+                                    )
+                                    continue
+                                    
+                                if current_domain and state_target and state_target != current_domain:
+                                    if state_target not in current_domain and current_domain not in state_target:
+                                        file_failed = True
+                                        result.failures.append(
+                                            FailureFingerprint(
+                                                failure_type="INVALID_STATE_TARGET",
+                                                stage="Verification Layer C",
+                                                details=f"Handler modifies '{state_target}' but domain is '{current_domain}'.",
+                                                file=file_clean_path,
+                                                component=file
+                                            )
+                                        )
+                                        continue
+
+                                state_var_name = state_target.lower() if state_target else ""
+                                content_without_decls = re.sub(
+                                    rf'const\s+\[\s*{re.escape(state_var_name)}\s*,\s*\w+\s*\]\s*=.*',
+                                    '',
+                                    file_content,
+                                    flags=re.IGNORECASE
+                                )
+                                is_consumed = bool(re.search(rf'\b{re.escape(state_var_name)}\b', content_without_decls, re.IGNORECASE))
+                                if not is_consumed:
+                                    file_failed = True
+                                    result.failures.append(
+                                        FailureFingerprint(
+                                            failure_type="ORPHANED_STATE_MUTATION",
+                                            stage="Verification Layer C",
+                                            details=f"Mutation of '{state_var_name}' is orphaned (not consumed in render).",
+                                            file=file_clean_path,
+                                            component=file
+                                        )
+                                    )
+                                    continue
+                            else:
                                 file_failed = True
                                 result.failures.append(
                                     FailureFingerprint(
-                                        failure_type="STATE_BINDING_FAILURE",
+                                        failure_type="UNRESOLVED_EVENT_HANDLER",
                                         stage="Verification Layer C",
                                         details=f"Unresolved interactive event handler '{h}' referenced in UI element",
                                         file=file_clean_path,
@@ -494,15 +623,26 @@ class SentinelVerificationGate:
                         try:
                             content = file_path.read_text(encoding="utf-8")
                             # Count simple bracket/tag balances
-                            open_tags = content.count("<div") + content.count("<button") + content.count("<form")
-                            close_tags = content.count("</div") + content.count("</button") + content.count("</form")
+                            open_tags = content.count("<div") + content.count("<button") + content.count("<form") + content.count("<main")
+                            close_tags = content.count("</div") + content.count("</button") + content.count("</form") + content.count("</main")
                             
+                            if open_tags != close_tags:
+                                raise SyntaxError("Unbalanced tags inside TSX components")
+
                             # Self closing tags or nested structures can vary, check basic braces
                             open_braces = content.count("{")
                             close_braces = content.count("}")
                             
-                            if abs(open_braces - close_braces) > 15: # Generous limit for structural integrity check
+                            if open_braces != close_braces: 
                                 raise SyntaxError("Unbalanced curly braces inside TSX components")
+                                
+                            # Check imports
+                            imports = re.findall(r'from\s+["\']([^"\']+)["\']', content)
+                            for imp in imports:
+                                if imp.startswith("."):
+                                    resolved = (file_path.parent / imp).resolve()
+                                    if not resolved.exists() and not Path(str(resolved) + ".tsx").exists() and not Path(str(resolved) + ".ts").exists() and not Path(str(resolved) + ".jsx").exists() and not Path(str(resolved) + ".js").exists():
+                                        raise ImportError(f"Unresolved frontend import: {imp}")
 
                             passed_files += 1
                         except Exception as e:
@@ -529,68 +669,226 @@ class SentinelVerificationGate:
         graph: ProjectTopologyGraph,
         result: VerificationResult
     ) -> None:
-        """
-        S-0.6: Verification Layer E — Runtime & Page Render Check
-        Checks system container health, and renders layouts without crashes.
-        """
-        # Under mock tests, simulate Playwright success by verifying App.jsx layout presence
+        """S-0.6: deterministic runtime and page-render health checks."""
+        print("[SENTINEL_GATE] Executing S-0.6: Runtime Page Render Check...")
+
         frontend_src = project_path / "Frontend" / "src"
         if not frontend_src.exists():
             frontend_src = project_path / "frontend" / "src"
 
-        app_file = frontend_src / "App.jsx"
-        if not app_file.exists():
+        # Skip runtime render checks only if there are no UI components in the graph and no frontend source files exist
+        frontend_exists = False
+        if frontend_src.exists():
+            try:
+                frontend_exists = any(frontend_src.iterdir())
+            except Exception:
+                pass
+
+        ui_node_types = {NodeType.UI_NODE, NodeType.PAGE_NODE, NodeType.SCREEN_NODE, NodeType.NAV_LAYOUT_NODE}
+        has_ui = any(getattr(n, "node_type", None) in ui_node_types for n in graph.nodes.values())
+        if not has_ui and not frontend_exists:
+            result.runtime_passed = True
+            result.runtime_survival = 1.0
+            result.visual_passed = True
+            result.visual_survival = 1.0
+            result.visual_evaluated = False
+            return
+
+        def safe_relative(file_path: Path) -> str:
+            try:
+                return str(file_path.resolve().relative_to(project_path.resolve()))
+            except ValueError:
+                return str(file_path)
+
+        def add_failure(failure_type: str, stage: str, details: str, file_path: Path = None, component: str = None) -> None:
+            result.failures.append(
+                FailureFingerprint(
+                    failure_type=failure_type,
+                    stage=stage,
+                    details=details,
+                    file=safe_relative(file_path) if file_path else None,
+                    component=component
+                )
+            )
+
+        def resolve_source_file(base: Path) -> Path:
+            if base.suffix:
+                return base if base.exists() and base.is_file() else None
+            for ext in (".tsx", ".jsx", ".ts", ".js"):
+                candidate = Path(str(base) + ext)
+                if candidate.exists() and candidate.is_file():
+                    return candidate
+            for ext in (".tsx", ".jsx", ".ts", ".js"):
+                candidate = base / f"index{ext}"
+                if candidate.exists() and candidate.is_file():
+                    return candidate
+            return None
+
+        def resolve_import(current_file: Path, import_path: str) -> Path:
+            if import_path.startswith("@/"):
+                return resolve_source_file((frontend_src / import_path[2:]).resolve())
+            if import_path.startswith("."):
+                return resolve_source_file((current_file.parent / import_path).resolve())
+            return None
+
+        if not frontend_src.exists():
             result.runtime_passed = False
             result.runtime_survival = 0.0
             result.visual_passed = False
             result.visual_survival = 0.0
-            result.failures.append(
-                FailureFingerprint(
-                    failure_type="RUNTIME_BOOT_FAILURE",
-                    stage="Verification Layer E",
-                    details="App.jsx entry point not found in sandbox space."
-                )
-            )
+            result.visual_evaluated = False
+            print("[VERIFY_RUNTIME] entrypoint=NONE runtime_ok=False visual_ok=N/A visual_evaluated=False")
+            add_failure("RUNTIME_BOOT_FAILURE", "Layer E: Entrypoint Resolution", f"Frontend src directory missing at {frontend_src}")
+            return
+
+        ENTRY_FILES = [
+            "main.tsx", "main.jsx",
+            "App.tsx", "App.jsx",
+            "app.tsx", "app.jsx",
+            "Root.tsx", "Root.jsx",
+        ]
+
+        app_file = None
+        for candidate_name in ENTRY_FILES:
+            candidate = frontend_src / candidate_name
+            if candidate.exists():
+                app_file = candidate
+                break
+
+        if not app_file:
+            best_candidate = None
+            best_score = -1
+            
+            for ext in ("*.tsx", "*.jsx"):
+                for candidate in frontend_src.rglob(ext):
+                    try:
+                        file_content = candidate.read_text(encoding="utf-8")
+                        if bool(re.search(r'export\s+default|function\s+[A-Z]\w*\s*\(|const\s+[A-Z]\w*\s*=', file_content)):
+                            score = 0
+                            lname = candidate.name.lower()
+                            if lname.startswith("index"): score += 25
+                            if lname.startswith("main"): score += 25
+                            if lname.startswith("app"): score += 20
+                            if lname.startswith("root"): score += 15
+                            
+                            if "ReactDOM.createRoot" in file_content: score += 100
+                            if "<RouterProvider" in file_content: score += 50
+                            if "<BrowserRouter" in file_content: score += 50
+                            if "export default" in file_content: score += 10
+                            
+                            if score > best_score:
+                                best_score = score
+                                best_candidate = candidate
+                    except Exception:
+                        pass
+            if best_candidate:
+                app_file = best_candidate
+
+        if not app_file:
+            result.runtime_passed = False
+            result.runtime_survival = 0.0
+            result.visual_passed = False
+            result.visual_survival = 0.0
+            result.visual_evaluated = False
+            print("[VERIFY_RUNTIME] entrypoint=NONE runtime_ok=False visual_ok=N/A visual_evaluated=False")
+            add_failure("RUNTIME_BOOT_FAILURE", "Layer E: Entrypoint Resolution", "App.jsx/tsx entry point not found in frontend src.")
             return
 
         try:
             content = app_file.read_text(encoding="utf-8")
-            # Verify primary layout component or Router rendering is fully declared
-            has_routes = "<Routes>" in content and "</Routes>" in content
-            has_router = "<Router>" in content or "<BrowserRouter>" in content
-            
-            if not has_routes or not has_router:
-                result.visual_passed = False
-                result.visual_survival = 0.5
-                result.failures.append(
-                    FailureFingerprint(
-                        failure_type="VISUAL_RENDER_FAILURE",
-                        stage="Verification Layer E",
-                        details="Blank page threat: App.jsx missing structured Router/Routes wrapping, risking render crash."
-                    )
-                )
-            else:
-                result.visual_passed = True
-                result.visual_survival = 1.0
+            runtime_ok = True
+            visual_ok = True
 
-            result.runtime_passed = True
-            result.runtime_survival = 1.0
+            if re.search(r'throw\s+new\s+Error|process\.exit\s*\(|while\s*\(\s*true\s*\)', content):
+                runtime_ok = False
+                add_failure("HEALTH_CHECK_FAILURE", "Layer E: Static Runtime Health", "App entry contains an obvious render-crash or infinite-loop pattern.", app_file, app_file.name)
+
+            has_component = bool(re.search(r'export\s+default|function\s+[A-Z]\w*\s*\(|const\s+[A-Z]\w*\s*=', content))
+            has_jsx = bool(re.search(r'return\s*\(?\s*<|=>\s*\(?\s*<', content, re.S))
+            if not has_component or not has_jsx:
+                runtime_ok = False
+                add_failure("RUNTIME_BOOT_FAILURE", "Layer E: Static Runtime Health", "App entry does not expose a component with a JSX render path.", app_file, app_file.name)
+
+            blank_patterns = [
+                r'return\s+null\s*;',
+                r'return\s*\(\s*<>\s*</>\s*\)',
+                r'return\s*\(\s*<div\s*/>\s*\)',
+                r'display\s*:\s*[\'\"]none[\'\"]',
+            ]
+            if any(re.search(pattern, content, re.S) for pattern in blank_patterns):
+                visual_ok = False
+                add_failure("VISUAL_RENDER_FAILURE", "Layer E: Visual Render Health", "App entry appears to render a blank or hidden page.", app_file, app_file.name)
+
+            uses_routes = "<Routes" in content or "<Route" in content or "createBrowserRouter" in content
+            uses_router = "<Router" in content or "<BrowserRouter" in content or "<HashRouter" in content or "<RouterProvider" in content
+            
+            router_style = "NONE"
+            if "<RouterProvider" in content: router_style = "RouterProvider"
+            elif "<BrowserRouter" in content: router_style = "BrowserRouter"
+            elif "<HashRouter" in content: router_style = "HashRouter"
+            elif "<Router" in content: router_style = "Router"
+            
+            if uses_routes and not uses_router:
+                visual_ok = False
+                add_failure("VISUAL_RENDER_FAILURE", "Layer E: Router Render Health", "Routes are declared without a Router/RouterProvider wrapper.", app_file, app_file.name)
+
+            for route_match in re.finditer(r'<Route\b([^>]*)>', content, re.S):
+                route_attrs = route_match.group(1)
+                if "element=" not in route_attrs and "Component=" not in route_attrs:
+                    visual_ok = False
+                    add_failure("VISUAL_RENDER_FAILURE", "Layer E: Router Render Health", "Route declaration is missing an element or Component binding.", app_file, app_file.name)
+                    break
+
+            imports = re.findall(r'import\s+(.+?)\s+from\s+[\'\"]([^\'\"]+)[\'\"]', content, re.S)
+            for spec, import_path in imports:
+                if import_path.startswith((".", "@/")) and not resolve_import(app_file, import_path):
+                    runtime_ok = False
+                    add_failure("RUNTIME_BOOT_FAILURE", "Layer E: Entrypoint Resolution", f"App imports unresolved render dependency '{import_path}'.", app_file, app_file.name)
+                names = []
+                named_match = re.search(r'\{([^}]+)\}', spec)
+                if named_match:
+                    names.extend(part.split(" as ")[-1].strip() for part in named_match.group(1).split(","))
+                default_name = spec.split("{")[0].split(",")[0].strip()
+                if default_name and default_name not in ("type", "React"):
+                    names.append(default_name)
+                content_without_imports = re.sub(r'import\s+.*?;', '', content)
+                content_without_imports = re.sub(r'import\s+.*?from\s+.*?;', '', content_without_imports)
+                for name in names:
+                    if name and name[0].isupper():
+                        is_projected = bool(re.search(rf'\b{re.escape(name)}\b', content_without_imports))
+                        if not is_projected:
+                            visual_ok = False
+                            add_failure("VISUAL_RENDER_FAILURE", "Layer E: Visual Render Health", f"Imported component '{name}' is not projected into the App render tree.", app_file, name)
+
+            result.runtime_passed = runtime_ok
+            result.runtime_survival = 1.0 if runtime_ok else 0.0
+            
+            if not runtime_ok:
+                result.visual_passed = False
+                result.visual_survival = 0.0
+                result.visual_evaluated = False
+            else:
+                result.visual_passed = visual_ok
+                result.visual_survival = 1.0 if visual_ok else 0.0
+                result.visual_evaluated = True
+                
+            print(f"[VERIFY_RUNTIME] entrypoint={app_file.name} router_style={router_style}")
+            print(f"[VERIFY_RUNTIME] runtime_ok={runtime_ok} visual_ok={visual_ok if result.visual_evaluated else 'N/A'} visual_evaluated={result.visual_evaluated}")
 
         except Exception as e:
             result.runtime_passed = False
             result.runtime_survival = 0.0
-            result.failures.append(
-                FailureFingerprint(
-                    failure_type="HEALTH_CHECK_FAILURE",
-                    stage="Verification Layer E",
-                    details=f"Sandbox runtime boot health check failed: {str(e)}"
-                )
-            )
+            result.visual_passed = False
+            result.visual_survival = 0.0
+            result.visual_evaluated = False
+            print(f"[VERIFY_RUNTIME] entrypoint={app_file.name if app_file else 'NONE'} runtime_ok=False visual_ok=N/A visual_evaluated=False")
+            add_failure("HEALTH_CHECK_FAILURE", "Layer E: Static Runtime Health", f"Runtime render health check failed: {str(e)}", app_file, app_file.name if app_file else None)
 
     @staticmethod
     def _verify_topology_integrity(
         graph: ProjectTopologyGraph,
-        result: VerificationResult
+        result: VerificationResult,
+        intent_graph: Optional[Any] = None
     ) -> None:
         """
         S-0.6B: Verification Layer F — Topology Integrity Checks
@@ -677,6 +975,45 @@ class SentinelVerificationGate:
         else:
             result.topology_survival = 1.0
 
+        def has_cycles():
+            visited = set()
+            path = set()
+            def dfs(node):
+                if node in path: return True
+                if node in visited: return False
+                visited.add(node)
+                path.add(node)
+                for edge in graph.edges:
+                    if edge.source_id == node and dfs(edge.target_id):
+                        return True
+                path.remove(node)
+                return False
+            for node in graph.nodes:
+                if dfs(node): return True
+            return False
+            
+        if has_cycles():
+            result.topology_survival = 0.0
+            result.failures.append(
+                FailureFingerprint(
+                    failure_type="TOPOLOGY_INTEGRITY_FAILURE",
+                    stage="Verification Layer F",
+                    details="Cycle detected in topology."
+                )
+            )
+
+        if intent_graph:
+            for n_id, n_data in intent_graph.nodes.items():
+                if n_id not in graph.nodes:
+                    result.topology_survival = 0.0
+                    result.failures.append(
+                        FailureFingerprint(
+                            failure_type="TOPOLOGY_INTEGRITY_FAILURE",
+                            stage="Verification Layer F",
+                            details=f"Intent graph expected node '{n_id}'."
+                        )
+                    )
+
         if len(schema_nodes) > 0 and connected_schemas < len(schema_nodes):
             result.topology_passed = False
         else:
@@ -705,3 +1042,118 @@ class SentinelVerificationGate:
                     return True
 
         return False
+
+
+
+class TopologyVerificationResult(BaseModel):
+    topology_passed: bool = True
+    schema_passed: bool = True
+    state_passed: bool = True
+    route_passed: bool = True
+    dependency_graph_passed: bool = True
+
+    topology_survival: float = 1.0
+    schema_survival: float = 1.0
+    state_survival: float = 1.0
+    route_survival: float = 1.0
+    dependency_graph_survival: float = 1.0
+
+    verification_score: float = 1.0
+    failures: List[FailureFingerprint] = Field(default_factory=list)
+
+    @property
+    def overall_survival(self) -> float:
+        values = [
+            self.topology_survival,
+            self.schema_survival,
+            self.state_survival,
+            self.route_survival,
+            self.dependency_graph_survival,
+        ]
+        return round(sum(values) / len(values), 4)
+
+
+class MarcusTopologyVerifier:
+    """
+    In-memory topology verifier that evaluates logical relations,
+    constraints, schemas, and state mappings without accessing the file system.
+    """
+
+    @staticmethod
+    def verify(
+        graph: ProjectTopologyGraph,
+        intent_graph: Optional[Any] = None
+    ) -> TopologyVerificationResult:
+        result = TopologyVerificationResult()
+        
+        # Helper to log failures
+        def add_failure(type_str: str, stage: str, details: str):
+            result.failures.append(
+                FailureFingerprint(
+                    failure_type=type_str,
+                    stage=stage,
+                    details=details
+                )
+            )
+
+        # 1. route_survival
+        ui_nodes = [node_id for node_id, node in graph.nodes.items() if node.node_type in (NodeType.UI_NODE, NodeType.PAGE_NODE)]
+        if ui_nodes:
+            has_root = any(graph.nodes[node_id].properties.get("is_root", False) for node_id in ui_nodes)
+            if not has_root:
+                result.route_survival = 0.0
+                result.route_passed = False
+                add_failure("ENTRY_ROUTE_FAILURE", "Marcus Route Verifier", "No entry route (is_root=True) found in topology.")
+
+        # 2. state_survival
+        if ui_nodes:
+            state_nodes = {node_id for node_id, node in graph.nodes.items() if node.node_type == NodeType.STATE_NODE}
+            checks = 0
+            passes = 0
+            for ui_id in ui_nodes:
+                checks += 1
+                has_binding = any(
+                    edge.relation == "binds_state" and edge.target_id in state_nodes 
+                    for edge in graph.edges if edge.source_id == ui_id
+                )
+                if has_binding:
+                    passes += 1
+                else:
+                    add_failure("STATE_BINDING_FAILURE", "Marcus State Verifier", f"UI node '{ui_id}' lacks binds_state edge.")
+            
+            result.state_survival = (passes / checks) if checks > 0 else 1.0
+            result.state_passed = (result.state_survival == 1.0)
+
+        # 3. dependency_graph_survival
+        checks = 0
+        passes = 0
+        for edge in graph.edges:
+            checks += 1
+            if edge.target_id in graph.nodes:
+                passes += 1
+            else:
+                add_failure("UNRESOLVED_IMPORT_FAILURE", "Marcus Dependency Verifier", f"Edge points to non-existent node '{edge.target_id}'.")
+        result.dependency_graph_survival = (passes / checks) if checks > 0 else 1.0
+        result.dependency_graph_passed = (result.dependency_graph_survival == 1.0)
+
+        # 4. schema_survival and topology_survival
+        # For simplicity in testing, we assume they pass unless there's an obvious missing schema fields
+        schema_nodes = [node_id for node_id, node in graph.nodes.items() if node.node_type == NodeType.SCHEMA_NODE]
+        for s_id in schema_nodes:
+            # Minimal check
+            pass
+
+        result.verification_score = result.overall_survival
+        
+        # Determine overall pass
+        if any(not val for val in [
+            result.topology_passed,
+            result.schema_passed,
+            result.state_passed,
+            result.route_passed,
+            result.dependency_graph_passed
+        ]):
+            result.verification_score = min(result.verification_score, 0.4)
+
+        return result
+

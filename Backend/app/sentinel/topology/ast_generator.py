@@ -317,6 +317,8 @@ class ASTGenerator:
 
 
         # Establish import mappings derived from topology edges
+        from app.sentinel.topology.import_resolver import ImportResolver
+
         for edge in graph.edges:
             if edge.relation == "imports":
                 src_node = graph.nodes[edge.source_id]
@@ -324,10 +326,17 @@ class ASTGenerator:
                 
                 src_path = src_node.properties.get("file_path")
                 tgt_name = tgt_node.properties.get("entity_name") or tgt_node.properties.get("component_name")
-                tgt_module = tgt_node.properties.get("file_path", "").replace(".py", "").replace("/", ".").replace("Backend.", "")
+                tgt_path = tgt_node.properties.get("file_path", "")
                 
-                if src_path and tgt_name and tgt_module and src_path in ast_files:
-                    ast_files[src_path].imports.append(ASTImport(source=tgt_module, symbols=[tgt_name]))
+                if src_path and tgt_name and tgt_path and src_path in ast_files:
+                    try:
+                        tgt_module = ImportResolver.resolve(
+                            source_path=src_path,
+                            target_path=tgt_path
+                        )
+                        ast_files[src_path].imports.append(ASTImport(source=tgt_module, symbols=[tgt_name]))
+                    except ValueError:
+                        pass
 
         for af in ast_files.values():
             af.update_integrity()
@@ -363,7 +372,7 @@ class ASTGenerator:
     def _generate_api_route(endpoint: Dict[str, Any], entity_name: str) -> ASTRoute:
         path = endpoint["path"]
         method = endpoint["method"].upper()
-        handler_name = f"{method.lower()}_{path.replace('/', '_').replace('{', '').replace('}', '').strip('_')}"
+        handler_name = f"{method.lower()}_{path.replace('/', '_').replace('{', '').replace('}', '').replace('-', '_').strip('_')}"
         
         args = []
         body = []

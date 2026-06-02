@@ -17,8 +17,13 @@ import os
 import json
 
 import sqlite3
+import shutil
+
+import tempfile
 
 import numpy as np
+
+from pathlib import Path
 
 import pytest
 
@@ -49,6 +54,7 @@ from app.sentinel.cognition.sentinel_core import SentinelCore
 from app.sentinel.failure_memory.failure_geometry import FailureGeometry
 
 from app.sentinel.failure_memory.repulsion_engine import RepulsionEngine
+from app.sentinel.topology.ast_projector import ASTProjector
 
 from app.agents.sub_agents import (
 
@@ -234,79 +240,133 @@ def test_failure_geometry_encoding_and_sqlite():
 
         os.remove(db_path)
 
-
-
     geom = FailureGeometry(db_path)
 
-
-
     # Encode a specific failure
-
     vec1 = FailureGeometry.encode_failure(
-
         node_count=10,
-
         edge_count=15,
-
         is_cyclic=True,
-
         error_class="topology",
-
         mutation_tier=4,
-
         error_len=200,
-
         api_node_count=3,
-
         ui_node_count=4,
-
-        schema_node_count=2
-
+        schema_node_count=2,
     )
-
-
 
     # Insert into database
-
     geom.insert_failure(
-
         failure_id="fail-1",
-
         vector=vec1,
-
         error_class="topology",
-
         cycle_id="cycle-123",
-
-        details="Cyclic topology failure in dashboard views"
-
+        details="Cyclic topology failure in dashboard views",
     )
 
-
-
     # Fetch from database
-
     failures = geom.get_all_failures()
-
     assert len(failures) == 1
-
     f_id, vec_retrieved, err_class, cyc_id, details = failures[0]
-
     assert f_id == "fail-1"
-
     assert err_class == "topology"
-
     assert cyc_id == "cycle-123"
-
     assert np.allclose(vec1, vec_retrieved)
 
-
-
     # Clean up
+    if os.path.exists(db_path):
+        os.remove(db_path)
+
+
+
+def test_failure_geometry_records_verification_stage():
+
+    db_path = "tests/unit/temp_failure_memory_stage.db"
 
     if os.path.exists(db_path):
 
         os.remove(db_path)
+
+    geom = FailureGeometry(db_path)
+
+    vec = FailureGeometry.encode_failure(
+        node_count=12,
+        error_class="WIRING_FAILURE",
+        mutation_tier=4,
+        error_len=80,
+        ui_node_count=5,
+    )
+
+    geom.insert_failure(
+        failure_id="fail-stage-1",
+        vector=vec,
+        error_class="WIRING_FAILURE",
+        cycle_id="cycle-stage",
+        details="Frontend route wiring aborted",
+        verification_stage="Dynamic Route Wiring",
+    )
+
+    rows = geom.mal.load_all_records()
+    assert len(rows) == 1
+
+    f_id, _, err_class, cyc_id, details, stage, *_ = rows[0]
+    assert f_id == "fail-stage-1"
+    assert err_class == "WIRING_FAILURE"
+    assert cyc_id == "cycle-stage"
+    assert details == "Frontend route wiring aborted"
+    assert stage == "Dynamic Route Wiring"
+
+
+
+def test_ast_projector_atomic_promote_replaces_live_tree():
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+
+        root = Path(tmp_dir)
+        project_path = root / "project"
+        staging_path = root / ".staging"
+
+        (project_path / "Frontend").mkdir(parents=True)
+        (project_path / "Frontend" / "live.txt").write_text("live", encoding="utf-8")
+        (staging_path / "Frontend").mkdir(parents=True)
+        (staging_path / "Frontend" / "staged.txt").write_text("staged", encoding="utf-8")
+
+        ASTProjector._atomic_promote_staging(project_path, staging_path)
+
+        assert (project_path / "Frontend" / "staged.txt").read_text(encoding="utf-8") == "staged"
+        assert not (project_path / "Frontend" / "live.txt").exists()
+        assert not staging_path.exists()
+        assert not (root / ".project.rollback_backup").exists()
+
+
+
+def test_ast_projector_atomic_promote_rolls_back_on_failure(monkeypatch):
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+
+        root = Path(tmp_dir)
+        project_path = root / "project"
+        staging_path = root / ".staging"
+
+        (project_path / "Frontend").mkdir(parents=True)
+        (project_path / "Frontend" / "live.txt").write_text("live", encoding="utf-8")
+        (staging_path / "Frontend").mkdir(parents=True)
+        (staging_path / "Frontend" / "staged.txt").write_text("staged", encoding="utf-8")
+
+        original_move = shutil.move
+
+        def fail_on_stage_move(src, dst, *args, **kwargs):
+            if Path(src).name == ".staging":
+                raise RuntimeError("simulated promotion failure")
+            return original_move(src, dst, *args, **kwargs)
+
+        monkeypatch.setattr(shutil, "move", fail_on_stage_move)
+
+        with pytest.raises(RuntimeError):
+            ASTProjector._atomic_promote_staging(project_path, staging_path)
+
+        assert (project_path / "Frontend" / "live.txt").read_text(encoding="utf-8") == "live"
+        assert not (project_path / "Frontend" / "staged.txt").exists()
 
 
 
@@ -627,4 +687,3 @@ def test_mutation_engine_escape_proposals(base_graph):
     assert escapes[0].mutation_tier == MutationTier.COSMETIC
 
     assert escapes[0].action == "UPDATE_NODE"
-

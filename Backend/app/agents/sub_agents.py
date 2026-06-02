@@ -196,9 +196,9 @@ class MarcusGovernanceAnalyst:
     ) -> Dict[str, Any]:
         log("COGNITION", "Marcus Governance Conscience conducting structural checks...")
         
-        # Run verification gate on staging context to feed Marcus technical metrics
-        project_path = getattr(branch, "project_path", None) or Path(".")
-        verification = SentinelVerificationGate.verify(Path(project_path), branch.topology_graph)
+        # S-0.6C decoupled in-memory verifier avoiding empty staging workspace file checks
+        from app.sentinel.verification.verification_gate import MarcusTopologyVerifier
+        verification = MarcusTopologyVerifier.verify(branch.topology_graph)
         
         # Prepare evaluation profile based strictly on technical verification metrics
         raw_prompt = f"""
@@ -207,16 +207,14 @@ Repulsion Metric: {branch.repulsion_score}
 Entropy History: {branch.entropy_history}
 
 TECHNICAL VERIFICATION METRICS:
-- Dependency Survival: {verification.dependency_survival * 100}%
-- Schema Survival: {verification.schema_survival * 100}%
-- State Binding Survival: {verification.state_binding_survival * 100}%
-- Build Survival: {verification.build_survival * 100}%
-- Runtime Survival: {verification.runtime_survival * 100}%
-- Visual Survival: {verification.visual_survival * 100}%
-- Topology Survival: {verification.topology_survival * 100}%
+- Topology Cohesion: {verification.topology_survival * 100}%
+- Schema Integrity: {verification.schema_survival * 100}%
+- State Binding: {verification.state_survival * 100}%
+- Route Validity: {verification.route_survival * 100}%
+- Graph Dependency: {verification.dependency_graph_survival * 100}%
 
 Integrated Verification Score: {verification.verification_score}
-Gate Recommendation: {verification.recommendation}
+Gate Recommendation: {"PASS" if verification.verification_score >= 0.70 else "REJECT"}
 """
         # Default fallback
         governance_result = {
@@ -319,3 +317,78 @@ Gate Recommendation: {verification.recommendation}
             }
 
         return governance_result
+
+    @staticmethod
+    async def evaluate_failures(failures: List[Any], drift_severity: str = "CLEAN") -> Dict[str, Any]:
+        """
+        Evaluates projection failures directly to determine if they are recoverable.
+        Returns:
+            {
+                "decision": "REPAIR" | "REJECT",
+                "repair_strategy": str
+            }
+        """
+        log("COGNITION", f"Marcus Governance analyzing {len(failures)} failures for repair strategy...")
+        if not failures:
+            return {"decision": "REPAIR", "repair_strategy": "No failures detected."}
+        
+        # Build evaluation context
+        context_lines = []
+        for i, f in enumerate(failures):
+            context_lines.append(f"Failure {i+1}:")
+            context_lines.append(f"  Type: {getattr(f, 'failure_type', 'UNKNOWN')}")
+            context_lines.append(f"  Stage: {getattr(f, 'stage', 'UNKNOWN')}")
+            context_lines.append(f"  Details: {getattr(f, 'details', 'None')}")
+            context_lines.append("")
+            
+        failure_context = "\n".join(context_lines)
+        
+        raw_prompt = f"""
+We have encountered the following projection failures:
+
+{failure_context}
+
+Based on Sentinel architectural principles:
+1. If the failures indicate a fundamentally flawed or unsalvageable architecture (e.g. infinite loops, unrecoverable constraints), return REJECT.
+2. If the failures are repairable through topology mutation or component rewriting (e.g. missing bindings, syntax errors, missing handlers), return REPAIR.
+
+Respond in JSON format:
+{{
+    "decision": "REPAIR" or "REJECT",
+    "repair_strategy": "A brief explanation of how the cognitive faculties should address this failure (e.g. 'Add a state node and bind to UI component')."
+}}
+"""
+        
+        try:
+            raw_response = await call_llm(
+                prompt=raw_prompt,
+                system_prompt=MARCUS_PROMPT,
+                temperature=0.1
+            )
+            
+            cleaned = raw_response.strip()
+            if cleaned.startswith("```json"):
+                cleaned = cleaned[7:]
+            elif cleaned.startswith("```"):
+                cleaned = cleaned[3:]
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3]
+            cleaned = cleaned.strip()
+
+            parsed = json.loads(cleaned)
+            
+            decision = parsed.get("decision", "REPAIR")
+            if decision not in ["REPAIR", "REJECT"]:
+                decision = "REPAIR"
+                
+            return {
+                "decision": decision,
+                "repair_strategy": parsed.get("repair_strategy", "Proceed with standard mutation fallbacks.")
+            }
+            
+        except Exception as e:
+            log("COGNITION", f"⚠️ Marcus failure analysis exception: {e}. Defaulting to REPAIR.")
+            return {
+                "decision": "REPAIR",
+                "repair_strategy": "Default deterministic fallback: trigger standard mutation."
+            }
