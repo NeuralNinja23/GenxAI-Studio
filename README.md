@@ -41,7 +41,6 @@
 </div>
 
 # Sentinel
-
 Sentinel is the recursive cognitive engine that powers GenxAI Studio.
 
 Unlike traditional AI coding systems that follow a fixed sequence of generation steps, Sentinel operates as a continuously self-correcting cognitive loop. It explores architectural possibilities, evaluates them against governance and verification constraints, learns from failures, and recursively searches for more stable solutions.
@@ -111,6 +110,7 @@ Failures are not automatically learned. Experiences must survive governance revi
 
 This prevents memory pollution, reduces failure repetition, and allows the system to evolve through validated experience rather than raw accumulation.
 
+---
 
 ## Objective
 
