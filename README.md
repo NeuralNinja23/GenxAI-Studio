@@ -40,18 +40,85 @@
   <img src="docs/images/Sentinel.png" alt="Sentinel Architecture" width="800" style="border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);" />
 </div>
 
-Sentinel is the cognitive engine driving GenxAI Studio. Unlike traditional linear agents, Sentinel employs a **10-Phase Recursive Recovery Loop** built on the philosophy that *not every experience deserves memory*.
+# Sentinel
 
-1. **Projection**: Attempt structural modifications via AST Projector.
-2. **Verification**: Multi-layered integrity gates ensure the code compiles and renders.
-3. **Failure Analysis**: Failures are dynamically clustered and embedded.
-4. **Governance (Marcus)**: The Marcus agent decides if a failure is recoverable (`REPAIR`) or fatal (`REJECT`).
-5. **Candidate Memory**: Failures are encoded into `sentinel_validation.db` as untrusted candidates, awaiting validation.
-6. **Universe of Thought**: Cognitive faculties propose multiple parallel architectural fixes.
-7. **Branch Evaluation**: The Repulsion Engine actively penalizes branches that match historical failures.
-8. **Selection**: The optimal, stable topology is selected.
-9. **Finalization**: Candidate memory is committed upon successful repair.
-10. **Telemetry**: Full flush of the internal cognitive logs for analysis.
+Sentinel is the recursive cognitive engine that powers GenxAI Studio.
+
+Unlike traditional AI coding systems that follow a fixed sequence of generation steps, Sentinel operates as a continuously self-correcting cognitive loop. It explores architectural possibilities, evaluates them against governance and verification constraints, learns from failures, and recursively searches for more stable solutions.
+
+At its core, Sentinel is built around four foundational systems:
+
+* **Governance** — Determines whether a topology should be accepted, repaired, or rejected.
+* **Verification** — Measures structural, runtime, visual, and architectural integrity.
+* **Memory** — Stores validated experiences and failure patterns for future reasoning.
+* **Universe of Thought (UoT)** — Explores alternative architectural possibilities through branch expansion and mutation.
+
+## Core Cognitive Loop
+
+### Projection
+
+Sentinel generates and projects a candidate topology into a staging environment through the AST Projector.
+
+### Verification
+
+The projected topology is evaluated through multiple verification layers including dependency integrity, state tracing, build validation, runtime validation, visual validation, and topology cohesion.
+
+### Failure Analysis
+
+Verification failures are converted into structured failure fingerprints and analyzed as cognitive signals rather than terminal errors.
+
+### Governance (Marcus)
+
+Marcus evaluates the discovered failures and determines whether they represent a recoverable condition (**REPAIR**) or a terminal condition (**REJECT**).
+
+### Candidate Memory
+
+Failures approved for repair are recorded as candidate memories. These experiences remain untrusted until a successful repair cycle validates them.
+
+### Universe of Thought Expansion
+
+Sentinel's faculties generate multiple architectural mutations and alternative topologies designed to overcome the detected failures.
+
+### Branch Evaluation
+
+Each candidate branch is evaluated using governance scores, convergence metrics, complexity analysis, and failure-memory repulsion.
+
+### Selection
+
+The most stable candidate topology is selected for the next projection cycle.
+
+### Recursive Recovery
+
+The selected topology re-enters projection and verification. This process continues until a stable solution emerges or governance terminates the search.
+
+### Memory Commitment
+
+Only successful recovery paths are promoted from candidate memory into committed memory.
+
+### Validation & Telemetry
+
+Every cycle is recorded in `sentinel_validation.db`, enabling measurement of governance effectiveness, memory usefulness, branch quality, failure distributions, and overall system performance.
+
+---
+
+## Philosophy
+
+Sentinel is built on a simple principle:
+
+**Not every experience deserves memory.**
+
+Failures are not automatically learned. Experiences must survive governance review, demonstrate utility through successful recovery, and prove their value before becoming part of Sentinel's long-term knowledge.
+
+This prevents memory pollution, reduces failure repetition, and allows the system to evolve through validated experience rather than raw accumulation.
+
+---
+
+## Objective
+
+The objective of Sentinel is not merely to generate software.
+
+The objective is to discover, verify, repair, and converge toward increasingly stable software architectures through recursive cognitive search.
+
 
 ---
 
