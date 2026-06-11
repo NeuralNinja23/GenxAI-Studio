@@ -150,3 +150,10 @@ coverage
 build
 
 
+# User added exclusions
+ecc_temp/
+skills.md
+skill.md
+
+
+
