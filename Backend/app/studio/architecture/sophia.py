@@ -57,6 +57,12 @@ class Sophia:
             info_graph_json=json.dumps(info_dump, indent=2)
         )
 
+        from app.sentinel.skills.skill_retriever import SkillRetriever
+        retrieved_skills_data = SkillRetriever.retrieve("Design intent analysis for UX architecture", "Sophia")
+        skill_context = "\n\n".join([item['content'] for item in retrieved_skills_data])
+        prompt = f"RELEVANT ENGINEERING SKILLS:\n{skill_context}\n\n{prompt}"
+        log("Sophia", f"Prompt augmented with {len(retrieved_skills_data)} ECC skills.")
+
         try:
             response = await call_llm(
                 prompt=prompt,

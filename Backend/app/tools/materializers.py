@@ -44,7 +44,7 @@ class ArtifactMaterializer:
 
         try:
             # Coordinate with the central ASTProjector (the sole legal disk writer)
-            projection_result = await ASTProjector.project(ctx)
+            projection_result = await ASTProjector().project(ctx, promote_immediately=True)
             
             # Enforce projection legality checks post-realization
             await self.validate_projection(projection_result.get("files_written", []), args)

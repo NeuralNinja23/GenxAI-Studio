@@ -219,7 +219,7 @@ class ASTGenerator:
 
         for node_id, node in graph.nodes.items():
             if node.node_type == NodeType.SCHEMA_NODE:
-                path = "Backend/app/models/runtime_models.py"
+                path = "backend/app/models/runtime_models.py"
                 if path not in ast_files:
                     ast_files[path] = ASTFile(file_path=path)
                 cls_def = ASTGenerator._generate_schema_class(node)
@@ -235,7 +235,7 @@ class ASTGenerator:
 
             elif node.node_type == NodeType.API_NODE:
                 router_name = node.properties.get("router_name", "default")
-                path = f"Backend/app/api/{router_name}.py"
+                path = f"backend/app/api/{router_name}.py"
                 if path not in ast_files:
                     ast_files[path] = ASTFile(file_path=path)
                 
@@ -263,7 +263,7 @@ class ASTGenerator:
 
             elif node.node_type == NodeType.UI_NODE:
                 comp_name = node.properties.get("component_name", "Component")
-                path = f"Frontend/src/components/{comp_name}.tsx"
+                path = f"frontend/src/components/{comp_name}.tsx"
                 if path not in ast_files:
                     ast_files[path] = ASTFile(file_path=path)
                 

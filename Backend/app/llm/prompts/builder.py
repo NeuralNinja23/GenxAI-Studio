@@ -47,7 +47,7 @@ You are being watched by the Sentinel Verification Gate. If you violate ANY of t
 📥 INPUT CONTEXT:
 You will receive:
 1. The synthesized `ComponentGraph`, `InteractionGraph`, `NavigationGraph`, and `SchemaGraph`.
-2. (Optional) A `Mutation Plan` from the Marcus Governance Analyst. If a Mutation Plan is provided, it means your previous attempt FAILED the Sentinel Gate. You MUST precisely apply the fixes demanded by the Mutation Plan.
+2. (Optional) A Sentinel Recovery Mutation Plan. If a Mutation Plan is provided, it means your previous attempt FAILED the Sentinel Gate.You MUST precisely apply the fixes demanded by the Mutation Plan.
 
 ---
 

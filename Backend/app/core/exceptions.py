@@ -61,6 +61,12 @@ class RateLimitError(LLMError):
         self.retries = retries
 
 
+class InfrastructureError(GenCodeError):
+    """Infrastructure-level error (e.g., DNS failure, network timeout, GCP outage)."""
+    pass
+
+
+
 
 class SandboxError(GenCodeError):
     """Docker sandbox error."""

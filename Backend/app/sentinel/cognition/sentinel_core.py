@@ -47,8 +47,7 @@ class SentinelCore:
     def explore_possibilities(
         self,
         intent: IntentField,
-        proposals: List[PatchIR],
-        marcus_advisory_modifiers: Optional[Dict[str, float]] = None
+        proposals: List[PatchIR]
     ) -> List[BranchState]:
         """
         Takes candidate topological mutation proposals (PatchIR) and explores them in parallel branch states.
@@ -60,8 +59,11 @@ class SentinelCore:
 
         # Source parent branch is the currently highest ranked active branch
         # Sort current active list by weight
-        self.attention_router.route_attention(active_list, marcus_advisory_modifiers)
+        self.attention_router.route_attention(active_list)
         parent = active_list[0]
+
+        # ── PRIORITY-0.5 INSTRUMENTATION: Prove flat-fan parent pinning ──────────
+        log("PATCH_DEBUG", f"[PARENT_PIN] parent.id={parent.branch_id[:8]} parent.nodes={len(parent.topology_graph.nodes)} parent.edges={len(parent.topology_graph.edges)}")
 
         new_children = []
         valid_patches = []
@@ -80,6 +82,9 @@ class SentinelCore:
 
             # 2. Spawn isolated candidate universe
             child = self.tree_manager.spawn_branch(parent, patch)
+
+            # ── PRIORITY-0.5 INSTRUMENTATION: Prove each child's parent id ──────
+            log("PATCH_DEBUG", f"[SPAWN] child={child.branch_id[:8]} parent_id={parent.branch_id[:8]} action={patch.action} target={patch.target_node_id}")
 
             # 3. Calculate new topological entropy
             child_entropy = ConvergenceEngine.calculate_entropy(child.topology_graph)
@@ -335,10 +340,10 @@ class SentinelCore:
         administrative_branches = [b for b in all_active if b.branch_id in ("root", "composite")]
         
         # Route attention on everything to compute weights
-        self.attention_router.route_attention(all_active, marcus_advisory_modifiers)
+        self.attention_router.route_attention(all_active)
         
         # Prune only candidate branches to budget
-        kept_candidates, pruned_candidates = self.attention_router.prune_to_budget(budget_candidates, marcus_advisory_modifiers)
+        kept_candidates, pruned_candidates = self.attention_router.prune_to_budget(budget_candidates)
         
         for p in pruned_candidates:
             self.tree_manager.prune_branch(p.branch_id, "Budget capacity limit exceeded.")
@@ -358,24 +363,11 @@ class SentinelCore:
                     metrics.record_branch_entropy(
                         branch.branch_id, branch.entropy_history[-1]
                     )
-                
-                ValidationRecorder.record_branch_run({
-                    "branch_id": branch.branch_id,
-                    "parent_branch": parent.branch_id,
-                    "state_fingerprint": branch.topology_graph.graph_hash if hasattr(branch.topology_graph, 'graph_hash') else None,
-                    "mutation_type": "composite" if branch.branch_id == "composite" else "patch",
-                    "weight": getattr(branch, "attention_weight", 0.0),
-                    "convergence": branch.entropy_history[-1] if branch.entropy_history else 0.0,
-                    "complexity": len(branch.topology_graph.nodes) if hasattr(branch.topology_graph, 'nodes') else 0,
-                    "repulsion_score": getattr(branch, "repulsion_score", 0.0),
-                    "marcus_mod": marcus_advisory_modifiers.get(branch.branch_id, 1.0) if marcus_advisory_modifiers else 1.0,
-                    "governance_passed": getattr(branch, "governance_passed", True),
-                    "selected": branch == kept[0] if kept else False,
-                    "failure_type": None
-                })
-        except Exception as e:
-            log("COGNITION", f"Metrics error: {e}")
-            pass  # Metrics are best-effort; never block cognition
+        except Exception as metrics_err:
+            log(
+                "COGNITION",
+                f"Failed to record projection metrics: {metrics_err}"
+            )
 
         return kept
 

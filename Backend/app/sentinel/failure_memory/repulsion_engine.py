@@ -7,7 +7,7 @@ class RepulsionEngine:
         self.failure_geometry = failure_geometry
 
     def get_repulsion_score(self, candidate_vec: np.ndarray) -> float:
-        failures = self.failure_geometry.get_all_failures()
+        failures = self.failure_geometry.get_committed_failures()
         if not failures:
             return 0.0
         max_sim = 0.0

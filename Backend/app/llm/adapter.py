@@ -10,12 +10,51 @@ V3 Enhancement: Token usage tracking for accurate cost reporting.
 import asyncio
 from typing import Optional, List, Dict, Any, Union
 from app.core.config import settings
-from app.core.exceptions import LLMError, RateLimitError
+from app.core.exceptions import LLMError, RateLimitError, InfrastructureError
 from app.core.logging import log
+
+
+def is_infrastructure_error(e: Exception) -> bool:
+    err_str = str(e)
+    infra_markers = [
+        "oauth2.googleapis.com",
+        "aiplatform.googleapis.com",
+        "NameResolutionError",
+        "getaddrinfo failed",
+        "Failed to resolve",
+        "Max retries exceeded",
+        "Connection refused",
+        "TransportError",
+        "ClientConnectorError",
+        "ClientOSError",
+        "ServerTimeoutError",
+        "socket.timeout",
+        "TimeoutError",
+        "ConnectionTimeout",
+        "Temporary failure in name resolution"
+    ]
+    if any(marker in err_str for marker in infra_markers):
+        return True
+    
+    import socket
+    import aiohttp
+    import google.auth.exceptions
+    if isinstance(e, (
+        socket.gaierror,
+        socket.timeout,
+        TimeoutError,
+        aiohttp.ClientConnectorError,
+        aiohttp.ClientOSError,
+        aiohttp.ServerTimeoutError,
+        google.auth.exceptions.TransportError
+    )):
+        return True
+    return False
 
 
 # Type for LLM response with usage data
 LLMResponse = Dict[str, Any]  # {"text": str, "usage": {"input": int, "output": int}}
+
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -192,7 +231,10 @@ class LLMAdapter:
             return response
         except Exception as e:
             # Report the failure - orchestrator decides what to do next
+            if is_infrastructure_error(e):
+                raise InfrastructureError(f"Infrastructure error: {e}") from e
             raise LLMError(provider, f"Provider error: {e}")
+
 
 
 

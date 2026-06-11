@@ -23,6 +23,7 @@ from typing import Any, Optional
 from app.core.config import settings
 from app.orchestration.state import WorkflowStateManager, CURRENT_MANAGERS
 from app.core.logging import log
+from app.studio.architecture.workspace_architecture import WorkspaceArchitecture
 
 async def run_workflow(
     project_id: str,
@@ -45,156 +46,163 @@ async def run_workflow(
         log("WORKFLOW", f"⚠️ Workflow already running for {project_id}, ignoring duplicate request")
         return
 
-
-
-
-
     log("WORKFLOW", f"✅ Workflow guard passed, starting for {project_id}")
-    final_project_path = workspaces_path / project_id
-    temp_dir_name = f".tmp_scaffold_{project_id}"
-    project_path = workspaces_path / temp_dir_name
-
-    if project_path.exists():
-        shutil.rmtree(project_path)
-    project_path.mkdir(parents=True, exist_ok=True)
+    from app.core.logging import set_active_project_id
+    set_active_project_id(project_id)
     try:
-        base_templates = settings.paths.base_dir / "backend" / "templates"
+        final_project_path = workspaces_path / project_id
+        temp_dir_name = f".tmp_scaffold_{project_id}"
+        project_path = workspaces_path / temp_dir_name
 
-        # ── Backend Seed ──
-        backend_dest = project_path / "backend"
-        backend_dest.mkdir(parents=True, exist_ok=True)
-        backend_seed = base_templates / "backend" / "seed"
+        if project_path.exists():
+            shutil.rmtree(project_path)
+        project_path.mkdir(parents=True, exist_ok=True)
+        try:
+            base_templates = settings.paths.base_dir / "backend" / "templates"
 
-        if backend_seed.exists():
-            def agent_artifact_filter(src, names):
-                ignored = []
-                for name in names:
-                    if name == "models.py" and "app" in str(src):
-                        ignored.append(name)
-                    if "routers" in str(src) and name.endswith(".py") and name != "__init__.py":
-                        ignored.append(name)
-                return ignored
-            shutil.copytree(backend_seed, backend_dest, dirs_exist_ok=True, ignore=agent_artifact_filter)
+            # ── Backend Seed ──
+            backend_dest = WorkspaceArchitecture.backend_root(project_path)
+            backend_dest.mkdir(parents=True, exist_ok=True)
+            backend_seed = base_templates / "backend" / "seed"
 
-        else:
-            log("WORKFLOW", "⚠️ Missing Backend Seed Template!")
+            if backend_seed.exists():
+                def agent_artifact_filter(src, names):
+                    ignored = []
+                    for name in names:
+                        if name == "models.py" and "app" in str(src):
+                            ignored.append(name)
+                        if "routers" in str(src) and name.endswith(".py") and name != "__init__.py":
+                            ignored.append(name)
+                    return ignored
+                shutil.copytree(backend_seed, backend_dest, dirs_exist_ok=True, ignore=agent_artifact_filter)
 
-        # Ensure routers __init__.py exists
+            else:
+                log("WORKFLOW", "⚠️ Missing Backend Seed Template!")
 
-        (backend_dest / "app" / "routers").mkdir(exist_ok=True, parents=True)
-        if not (backend_dest / "app" / "routers" / "__init__.py").exists():
-            (backend_dest / "app" / "routers" / "__init__.py").write_text("# Routers package\n", encoding="utf-8")
+            # Ensure routers __init__.py exists
 
-        # ── Test Templates ──
-        tests_dest = backend_dest / "tests"
-        tests_dest.mkdir(parents=True, exist_ok=True)
-        if not (tests_dest / "__init__.py").exists():
-            (tests_dest / "__init__.py").write_text("# Tests package\n", encoding="utf-8")
-        test_template_src = backend_seed / "tests" / "test_contract_api.template"
-        if test_template_src.exists():
-            shutil.copy2(test_template_src, tests_dest / "test_contract_api.template")
+            (backend_dest / "app" / "routers").mkdir(exist_ok=True, parents=True)
+            if not (backend_dest / "app" / "routers" / "__init__.py").exists():
+                (backend_dest / "app" / "routers" / "__init__.py").write_text("# Routers package\n", encoding="utf-8")
 
-        # ── Frontend Seed ──
-        frontend_dest = project_path / "frontend"
-        frontend_dest.mkdir(parents=True, exist_ok=True)
-        frontend_seed = base_templates / "frontend" / "seed"
-        if frontend_seed.exists():
-            shutil.copytree(frontend_seed, frontend_dest, dirs_exist_ok=True)
-        frontend_base = base_templates / "frontend"
-        for item in frontend_base.iterdir():
-            if item.name in ["seed", "reference"]:
-                continue
-            if item.is_file():
-                shutil.copy2(item, frontend_dest / item.name)
-            elif item.is_dir() and item.name == "src":
-                src_dir = frontend_dest / "src"
-                for src_item in item.rglob("*"):
-                    if src_item.is_file():
-                        rel_path = src_item.relative_to(item)
-                        if "components/ui" in str(rel_path).replace("\\", "/"):
-                            continue
-                        dest_path = src_dir / rel_path
-                        dest_path.parent.mkdir(parents=True, exist_ok=True)
-                        if not dest_path.exists():
-                            shutil.copy2(src_item, dest_path)
-            elif item.is_dir() and item.name == "public":
-                shutil.copytree(item, frontend_dest / "public", dirs_exist_ok=True)
+            # ── Test Templates ──
+            tests_dest = backend_dest / "tests"
+            tests_dest.mkdir(parents=True, exist_ok=True)
+            if not (tests_dest / "__init__.py").exists():
+                (tests_dest / "__init__.py").write_text("# Tests package\n", encoding="utf-8")
+            test_template_src = backend_seed / "tests" / "test_contract_api.template"
+            if test_template_src.exists():
+                shutil.copy2(test_template_src, tests_dest / "test_contract_api.template")
 
-        # ── Frontend Tests ──
-        (frontend_dest / "tests").mkdir(parents=True, exist_ok=True)
-        
-        # ── Docker Infrastructure ──
-        backend_tmpl = base_templates / "backend"
-        for docker_file in ["Dockerfile", ".dockerignore"]:
-            if (backend_tmpl / docker_file).exists():
-                shutil.copy2(backend_tmpl / docker_file, backend_dest / docker_file)
-        frontend_tmpl = base_templates / "frontend"
-        for docker_file in ["Dockerfile", ".dockerignore"]:
-            if (frontend_tmpl / docker_file).exists():
-                shutil.copy2(frontend_tmpl / docker_file, frontend_dest / docker_file)
-        docker_tmpl = base_templates / "docker"
-        if docker_tmpl.exists() and (docker_tmpl / "docker-compose.yml").exists():
-            shutil.copy2(docker_tmpl / "docker-compose.yml", project_path / "docker-compose.yml")
+            # ── Frontend Seed ──
+            frontend_dest = WorkspaceArchitecture.frontend_root(project_path)
+            frontend_dest.mkdir(parents=True, exist_ok=True)
+            frontend_seed = base_templates / "frontend" / "seed"
+            if frontend_seed.exists():
+                shutil.copytree(frontend_seed, frontend_dest, dirs_exist_ok=True)
+            frontend_base = base_templates / "frontend"
+            for item in frontend_base.iterdir():
+                if item.name in ["seed", "reference"]:
+                    continue
+                if item.is_file():
+                    shutil.copy2(item, frontend_dest / item.name)
+                elif item.is_dir() and item.name == "src":
+                    src_dir = frontend_dest / "src"
+                    for src_item in item.rglob("*"):
+                        if src_item.is_file():
+                            rel_path = src_item.relative_to(item)
+                            if "components/ui" in str(rel_path).replace("\\", "/"):
+                                continue
+                            dest_path = src_dir / rel_path
+                            dest_path.parent.mkdir(parents=True, exist_ok=True)
+                            if not dest_path.exists():
+                                shutil.copy2(src_item, dest_path)
+                elif item.is_dir() and item.name == "public":
+                    shutil.copytree(item, frontend_dest / "public", dirs_exist_ok=True)
+
+            # ── Frontend Tests ──
+            (frontend_dest / "tests").mkdir(parents=True, exist_ok=True)
             
-        (frontend_dest / ".env").write_text(
-            "# Frontend Environment Variables\nVITE_API_URL=http://localhost:8001/api\n",
-            encoding="utf-8",
-        )
+            # ── Docker Infrastructure ──
+            backend_tmpl = base_templates / "backend"
+            for docker_file in ["Dockerfile", ".dockerignore"]:
+                if (backend_tmpl / docker_file).exists():
+                    shutil.copy2(backend_tmpl / docker_file, backend_dest / docker_file)
+            frontend_tmpl = base_templates / "frontend"
+            for docker_file in ["Dockerfile", ".dockerignore"]:
+                if (frontend_tmpl / docker_file).exists():
+                    shutil.copy2(frontend_tmpl / docker_file, frontend_dest / docker_file)
+            docker_tmpl = base_templates / "docker"
+            if docker_tmpl.exists() and (docker_tmpl / "docker-compose.yml").exists():
+                shutil.copy2(docker_tmpl / "docker-compose.yml", project_path / "docker-compose.yml")
+                
+            (frontend_dest / ".env").write_text(
+                "# Frontend Environment Variables\nVITE_API_URL=http://localhost:8001/api\n",
+                encoding="utf-8",
+            )
 
-        # Atomic commit
-        if final_project_path.exists():
-            shutil.rmtree(final_project_path)
-        shutil.move(str(project_path), str(final_project_path))
-        project_path = final_project_path
+            # Atomic commit
+            if final_project_path.exists():
+                shutil.rmtree(final_project_path)
+            shutil.move(str(project_path), str(final_project_path))
+            project_path = final_project_path
 
-    except Exception as e:
-        log("WORKFLOW", f"Failed to scaffold project: {e}")
-        if project_path.exists() and "tmp_scaffold" in str(project_path):
-            try:
-                shutil.rmtree(project_path)
-            except Exception as cleanup_err:
-                log("WORKFLOW", f"Cleanup failed (non-fatal): {cleanup_err}")
-        await WorkflowStateManager.stop_workflow(project_id)
-        return
+            # Enforce workspace governance and casing repair after scaffold
+            violations = WorkspaceArchitecture.validate_and_repair_workspace(project_path)
+            if violations:
+                log("WORKFLOW", f"⚠️ Workspace governance violations detected in scaffold: {violations}")
+                if settings.strict_workspace_governance:
+                    raise ValueError(f"Strict workspace governance violated in scaffold: {violations}")
+
+        except Exception as e:
+            log("WORKFLOW", f"Failed to scaffold project: {e}")
+            if project_path.exists() and "tmp_scaffold" in str(project_path):
+                try:
+                    shutil.rmtree(project_path)
+                except Exception as cleanup_err:
+                    log("WORKFLOW", f"Cleanup failed (non-fatal): {cleanup_err}")
+            await WorkflowStateManager.stop_workflow(project_id)
+            return
 
 
-    # ── V4 Stage 1: Lock execution substrate ──
-    from app.sentinel.runtime.execution_kernel import get_kernel
-    kernel = get_kernel()
-    await kernel.lock_substrate_after_scaffold(
-        project_id=project_id,
-        project_path=project_path,
-    )
-
-    # ── V4 Execution Kernel entry point (Stage 6) ──
-    try:
-        from app.orchestration.sentinel_runtime import SentinelRuntime
-        runtime = SentinelRuntime()
-        success = await runtime.explore_and_project(
+        # ── V4 Stage 1: Lock execution substrate ──
+        from app.sentinel.runtime.execution_kernel import get_kernel
+        kernel = get_kernel()
+        await kernel.lock_substrate_after_scaffold(
             project_id=project_id,
             project_path=project_path,
-            user_request=description
         )
-        if success:
-            log("WORKFLOW", f"✅ V4 Initial Scaffold projection complete for {project_id}")
-            try:
-                import asyncio
-                from app.sandbox import get_sandbox
-                from app.utils.path_utils import get_project_path
-                log("WORKFLOW", f"🐳 Auto-initializing Docker Sandbox for {project_id}...")
-                sb_manager = get_sandbox()
-                await sb_manager.create_sandbox(project_id, get_project_path(project_id))
-                asyncio.create_task(sb_manager.start_sandbox(project_id, wait_healthy=True))
-                log("WORKFLOW", f"⚡ Docker Sandbox boot task launched successfully!")
-                
-            except Exception as sb_err:
-                log("WORKFLOW", f"⚠️ Failed to auto-initialize sandbox: {sb_err}")
-        else:
-            log("WORKFLOW", f"❌ V4 Initial Scaffold projection failed for {project_id}")
 
-    except Exception as e:
-        log("WORKFLOW", f"❌ V4 Scaffold execution error: {e}")
+        # ── V4 Execution Kernel entry point (Stage 6) ──
+        try:
+            from app.orchestration.sentinel_runtime import SentinelRuntime
+            runtime = SentinelRuntime()
+            success = await runtime.explore_and_project(
+                project_id=project_id,
+                project_path=project_path,
+                user_request=description
+            )
+            if success:
+                log("WORKFLOW", f"✅ V4 Initial Scaffold projection complete for {project_id}")
+                try:
+                    import asyncio
+                    from app.sandbox import get_sandbox
+                    from app.utils.path_utils import get_project_path
+                    log("WORKFLOW", f"🐳 Auto-initializing Docker Sandbox for {project_id}...")
+                    sb_manager = get_sandbox()
+                    await sb_manager.create_sandbox(project_id, get_project_path(project_id))
+                    asyncio.create_task(sb_manager.start_sandbox(project_id, wait_healthy=True))
+                    log("WORKFLOW", f"⚡ Docker Sandbox boot task launched successfully!")
+                    
+                except Exception as sb_err:
+                    log("WORKFLOW", f"⚠️ Failed to auto-initialize sandbox: {sb_err}")
+            else:
+                log("WORKFLOW", f"❌ V4 Initial Scaffold projection failed for {project_id}")
+
+        except Exception as e:
+            log("WORKFLOW", f"❌ V4 Scaffold execution error: {e}")
     finally:
+        set_active_project_id(None)
         await WorkflowStateManager.stop_workflow(project_id)
 
 
@@ -231,6 +239,12 @@ async def resume_workflow(
     else:
         if project_path.exists():
             log("WORKFLOW", f"Starting refinement pass for {project_id}")
+            # Enforce workspace governance and casing repair
+            violations = WorkspaceArchitecture.validate_and_repair_workspace(project_path)
+            if violations:
+                log("WORKFLOW", f"⚠️ Workspace governance violations detected: {violations}")
+                if settings.strict_workspace_governance:
+                    raise ValueError(f"Strict workspace governance violated: {violations}")
         else:
             log("WORKFLOW", f"No project found for {project_id}, cannot resume/refine")
             return
@@ -241,7 +255,8 @@ async def resume_workflow(
         return
 
     # ── V4 Execution Kernel entry point (Stage 6) ──
-
+    from app.core.logging import set_active_project_id
+    set_active_project_id(project_id)
     try:
         from app.orchestration.sentinel_runtime import SentinelRuntime
         from app.sentinel.runtime.execution_kernel import get_kernel
@@ -249,6 +264,20 @@ async def resume_workflow(
         kernel = get_kernel()
         runtime = SentinelRuntime()
         graph = await TopologyVersionManager.get_active_topology(project_id)
+        # Note: context/ctx needs to be created or resolved here if it is needed by the execution kernel
+        # For refinement, we typically retrieve the existing context or create a new cycle context
+        # Let's verify how context is handled
+        from app.models.runtime_models import MutationTier
+        from app.sentinel.topology.ast_generator import ASTGenerator
+        ast_files = ASTGenerator.generate(graph)
+        proposed_writes = list(ast_files.keys()) or ["frontend/src/components/Placeholder.tsx"]
+        from app.sentinel.runtime.execution_kernel import ProjectionCycleContext
+        ctx = ProjectionCycleContext(
+            project_id=project_id,
+            project_path=project_path,
+            mutation_tier=MutationTier.BEHAVIORAL,
+            proposed_writes=proposed_writes
+        )
         success = await kernel.run_projection_cycle(
             ctx=ctx, 
             graph=graph, 
@@ -274,6 +303,7 @@ async def resume_workflow(
     except Exception as e:
         log("WORKFLOW", f"❌ V4 Orchestration execution error: {e}")
     finally:
+        set_active_project_id(None)
         await WorkflowStateManager.stop_workflow(project_id)
 
 
@@ -284,7 +314,6 @@ async def resume_from_checkpoint_workflow(
     manager: Any,
     provider: Optional[str] = None,
     model: Optional[str] = None,
-
 ) -> bool:
     """
     Resume a workflow from a saved checkpoint (UI triggered).
@@ -300,6 +329,13 @@ async def resume_from_checkpoint_workflow(
         log("WORKFLOW", f"Project directory not found: {project_path}")
         return False
 
+    # Enforce workspace governance and casing repair
+    violations = WorkspaceArchitecture.validate_and_repair_workspace(project_path)
+    if violations:
+        log("WORKFLOW", f"⚠️ Workspace governance violations detected: {violations}")
+        if settings.strict_workspace_governance:
+            raise ValueError(f"Strict workspace governance violated: {violations}")
+
     can_start = await WorkflowStateManager.try_start_workflow(project_id)
     if not can_start:
         log("WORKFLOW", f"⚠️ Workflow already running for {project_id}")
@@ -307,6 +343,8 @@ async def resume_from_checkpoint_workflow(
 
 
     # ── V4 Execution Kernel entry point (Stage 6) ──
+    from app.core.logging import set_active_project_id
+    set_active_project_id(project_id)
     try:
         from app.orchestration.sentinel_runtime import SentinelRuntime
         runtime = SentinelRuntime()
@@ -325,6 +363,7 @@ async def resume_from_checkpoint_workflow(
     except Exception as e:
         log("WORKFLOW", f"❌ V4 Checkpoint recovery error: {e}")
     finally:
+        set_active_project_id(None)
         await WorkflowStateManager.stop_workflow(project_id)
     return True
 

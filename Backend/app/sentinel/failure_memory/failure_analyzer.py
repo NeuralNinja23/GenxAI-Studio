@@ -29,7 +29,9 @@ class FailureAnalyzer:
     @classmethod
     def analyze_and_record(cls, failures: List[Any]):
         import os
-        debug_path = os.path.join(os.path.dirname(__file__), "../../../../analyzer_debug.txt")
+        logs_dir = os.path.join(os.path.dirname(__file__), "../../../../Logs")
+        os.makedirs(logs_dir, exist_ok=True)
+        debug_path = os.path.join(logs_dir, "analyzer_debug.txt")
         with open(debug_path, "a") as f:
             f.write(f"Analyze called with {len(failures)} failures: {failures}\n")
             

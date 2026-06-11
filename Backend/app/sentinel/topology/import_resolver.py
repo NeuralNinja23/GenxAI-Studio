@@ -1,5 +1,6 @@
 import os
 from typing import Optional
+from app.studio.architecture.workspace_architecture import WorkspaceArchitecture
 
 class ImportResolver:
     """
@@ -29,20 +30,18 @@ class ImportResolver:
             # e.g., Backend/app/models/customer.py -> app.models.customer
             module = target_path.replace(".py", "")
             module = module.replace("\\", "/").replace("/", ".")
-            if module.startswith("Backend."):
-                module = module[len("Backend."):]
+            if module.lower().startswith("backend."):
+                module = module[8:]
             return module
 
         elif domain == "react":
             if cls.FRONTEND_MODE == "alias":
-                prefix = "Frontend/src/"
-                module = target_path
-                # strip extension
-                module = module.rsplit(".", 1)[0]
-                
-                if prefix in module:
-                    module = module.split(prefix)[-1]
-                    return f"@/{module}"
+                module = target_path.rsplit(".", 1)[0]
+                lower_module = module.lower()
+                prefix_lower = f"{WorkspaceArchitecture.FRONTEND_DIR.lower()}/src/"
+                if prefix_lower in lower_module:
+                    idx = lower_module.index(prefix_lower) + len(prefix_lower)
+                    return f"@/{module[idx:]}"
                 # If target is not in Frontend/src/, fallback to relative pathing
             
             # relative mode (or fallback from alias if target not in src)

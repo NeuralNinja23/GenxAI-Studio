@@ -1,7 +1,7 @@
 from app.sentinel.topology.ast_projector import ASTProjector
 from app.sentinel.verification.verification_gate import FailureFingerprint
 from app.sentinel.failure_memory.failure_analyzer import FailureAnalyzer
-from app.sentinel.telemetry.validation_bus import ValidationBus
+from app.sentinel.validation.validation_bus import ValidationBus
 
 def run_test():
     failures = [

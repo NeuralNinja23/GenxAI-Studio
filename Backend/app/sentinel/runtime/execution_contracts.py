@@ -57,6 +57,31 @@ TIER_ALLOWED_EXTENSIONS: Dict[MutationTier, FrozenSet[str]] = {
         ".json", ".yaml", ".yml",
         ".md",
     }),
+    # ── Phase 5: Atlas Repair tiers ──────────────────────────
+    # AST_EMISSION: targeted re-emission of specific generated files
+    MutationTier.AST_EMISSION: frozenset({
+        ".css", ".scss", ".less",
+        ".tsx", ".jsx", ".ts", ".js",
+        ".py",
+        ".json", ".yaml", ".yml",
+        ".md",
+    }),
+    # FILE_BODY: direct file body replacement within a scoped region
+    MutationTier.FILE_BODY: frozenset({
+        ".css", ".scss", ".less",
+        ".tsx", ".jsx", ".ts", ".js",
+        ".py",
+        ".json", ".yaml", ".yml",
+        ".md",
+    }),
+    # WORKSPACE_REPAIR: full workspace re-emission (last resort only)
+    MutationTier.WORKSPACE_REPAIR: frozenset({
+        ".css", ".scss", ".less",
+        ".tsx", ".jsx", ".ts", ".js",
+        ".py",
+        ".json", ".yaml", ".yml",
+        ".md",
+    }),
     MutationTier.FORBIDDEN: frozenset(),  # Nothing allowed
 }
 
@@ -298,6 +323,10 @@ def _required_oracles_for_tier(tier: MutationTier) -> Set[str]:
 
     # Topology: full hard oracle suite
     if tier == MutationTier.TOPOLOGY:
+        return {"syntax_oracle", "topology_oracle", "behavioral_oracle", "runtime_oracle"}
+
+    # Phase 5 repair tiers: full hard oracle suite (code-level mutations are equally impactful)
+    if tier in (MutationTier.AST_EMISSION, MutationTier.FILE_BODY, MutationTier.WORKSPACE_REPAIR):
         return {"syntax_oracle", "topology_oracle", "behavioral_oracle", "runtime_oracle"}
 
     # Forbidden: no oracle suite — should never reach here

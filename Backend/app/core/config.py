@@ -119,6 +119,9 @@ class Settings:
     am: AMSettings = field(default_factory=AMSettings)
     port: int = field(default_factory=lambda: int(os.getenv("PORT", 8000)))
     debug: bool = field(default_factory=lambda: os.getenv("DEBUG", "false").lower() == "true")
+    strict_workspace_governance: bool = field(
+        default_factory=lambda: os.getenv("STRICT_WORKSPACE_GOVERNANCE", "false").lower() == "true"
+    )
     
     def ensure_directories(self):
         """Ensure required directories exist."""

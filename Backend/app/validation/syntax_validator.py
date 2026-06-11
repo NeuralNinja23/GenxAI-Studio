@@ -604,7 +604,7 @@ def preflight_check(agent_output: Dict[str, Any]) -> Tuple[Dict[str, Any], List[
     """
     Pre-flight validation gate for agent output.
     
-    This is the main entry point, called BEFORE Marcus review.
+    This is the main entry point for pre-flight validation.
     
     Args:
         agent_output: The parsed agent response with "files" list

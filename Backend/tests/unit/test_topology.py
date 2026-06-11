@@ -730,7 +730,7 @@ async def test_ast_generation():
     # 1. Verify schema class generation
 
 
-    schema_path = "Backend/app/models/runtime_models.py"
+    schema_path = "backend/app/models/runtime_models.py"
 
 
     assert schema_path in ast_files
@@ -1028,8 +1028,14 @@ async def test_ast_projector_flow():
 
 
         proj_path = Path(tmp_dir)
+
+
         (proj_path / "frontend" / "src").mkdir(parents=True, exist_ok=True)
+
+
         with open(proj_path / "frontend" / "src" / "App.jsx", "w", encoding="utf-8") as f:
+
+
             f.write("// @ROUTE_IMPORTS\n// @ROUTES\n{/* @ROUTE_REGISTER - Integrator injects new routes here */}\n")
 
 
@@ -1040,14 +1046,25 @@ async def test_ast_projector_flow():
 
 
         # Mock cycle context
+
+
         from unittest.mock import patch
+
+
         from app.sentinel.verification.verification_gate import VerificationResult
 
-        mock_verify_patcher = patch('app.sentinel.topology.ast_projector.SentinelVerificationGate.verify')
+
+
+        mock_verify_patcher = patch('app.sentinel.verification.verification_gate.SentinelVerificationGate.verify')
+
+
         mock_verify = mock_verify_patcher.start()
+
+
         mock_verify.return_value = VerificationResult()
 
 
+        
         class MockCycleContext:
 
 
@@ -1076,13 +1093,29 @@ async def test_ast_projector_flow():
 
 
         graph.add_node("schema_task", NodeType.SCHEMA_NODE, {
+
+
             "entity_name": "Task",
+
+
             "fields": [{"name": "name", "type": "str", "required": True}]
+
+
         })
+
+
         graph.add_node("ui_app_root", NodeType.UI_NODE, {"is_root": True, "component_name": "App"})
+
+
         graph.add_node("ui_task_panel", NodeType.UI_NODE, {"component_name": "TaskPanel"})
+
+
         graph.add_edge("ui_app_root", "ui_task_panel", "renders_component")
+
+
         graph.add_edge("ui_task_panel", "schema_task", "binds_schema")
+
+
         
         graph.update_graph_hash()
 
@@ -1105,7 +1138,7 @@ async def test_ast_projector_flow():
         # Project topology to temporary filesystem directory
 
 
-        res = await ASTProjector.project(ctx)
+        res = await ASTProjector().project(ctx, promote_immediately=True)
 
 
         
@@ -1114,10 +1147,10 @@ async def test_ast_projector_flow():
         # Verify projected files are generated safely
 
 
-        assert "Backend/app/models/runtime_models.py" in res["files_written"]
+        assert "backend/app/models/runtime_models.py" in res["files_written"]
 
 
-        assert (proj_path / "Backend/app/models/runtime_models.py").exists()
+        assert (proj_path / "backend/app/models/runtime_models.py").exists()
 
 
         assert (proj_path / ".genx_ast_manifest.json").exists()
@@ -2450,7 +2483,7 @@ async def test_ast_generator_deep_mappings():
     # Assert Beanie Optional Model Fields mapping
 
 
-    model_file = ast_files["Backend/app/models/runtime_models.py"]
+    model_file = ast_files["backend/app/models/runtime_models.py"]
 
 
     todo_class = model_file.classes[0]
@@ -2477,7 +2510,7 @@ async def test_ast_generator_deep_mappings():
     # Assert active FastAPI Beanie CRUD generation
 
 
-    router_file = ast_files["Backend/app/api/tasks.py"]
+    router_file = ast_files["backend/app/api/tasks.py"]
 
 
     routes = router_file.routes
@@ -2513,7 +2546,7 @@ async def test_ast_generator_deep_mappings():
     # Assert React async fetch hook mapping
 
 
-    ui_file = ast_files["Frontend/src/components/TaskList.tsx"]
+    ui_file = ast_files["frontend/src/components/TaskList.tsx"]
 
 
     comp = ui_file.components[0]

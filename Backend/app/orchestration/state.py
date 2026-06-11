@@ -28,7 +28,7 @@ class WorkflowStateManager:
     @staticmethod
     async def get_session(project_id: str) -> WorkflowSession:
         """Get or create session."""
-        session = await WorkflowSession.find_one(WorkflowSession.project_id == project_id)
+        session = await WorkflowSession.find_one({"project_id": project_id})
         if not session:
             session = WorkflowSession(project_id=project_id)
             await session.insert()
@@ -37,7 +37,7 @@ class WorkflowStateManager:
     @staticmethod
     async def is_running(project_id: str) -> bool:
         """Check if a workflow is running for a project."""
-        session = await WorkflowSession.find_one(WorkflowSession.project_id == project_id)
+        session = await WorkflowSession.find_one({"project_id": project_id})
         return session.is_running if session else False
     
     @staticmethod
@@ -91,13 +91,13 @@ class WorkflowStateManager:
     @staticmethod
     async def is_paused(project_id: str) -> bool:
         """Check if a workflow is paused for a project."""
-        session = await WorkflowSession.find_one(WorkflowSession.project_id == project_id)
+        session = await WorkflowSession.find_one({"project_id": project_id})
         return session.is_paused if session else False
     
     @staticmethod
     async def get_paused_state(project_id: str) -> Optional[Dict[str, Any]]:
         """Get the paused workflow state."""
-        session = await WorkflowSession.find_one(WorkflowSession.project_id == project_id)
+        session = await WorkflowSession.find_one({"project_id": project_id})
         return session.paused_state if (session and session.is_paused) else None
     
     @staticmethod
@@ -132,7 +132,7 @@ class WorkflowStateManager:
     @staticmethod
     async def resume_workflow(project_id: str) -> Optional[Dict[str, Any]]:
         """Resume a paused workflow, returning the saved state and cleaning up."""
-        session = await WorkflowSession.find_one(WorkflowSession.project_id == project_id)
+        session = await WorkflowSession.find_one({"project_id": project_id})
         if not session or not session.is_paused:
             return None
             
@@ -154,7 +154,7 @@ class WorkflowStateManager:
     @staticmethod
     async def get_intent(project_id: str) -> Dict[str, Any]:
         """Get stored intent for a project."""
-        session = await WorkflowSession.find_one(WorkflowSession.project_id == project_id)
+        session = await WorkflowSession.find_one({"project_id": project_id})
         return session.intent if (session and session.intent) else {}
     
     @staticmethod
@@ -167,7 +167,7 @@ class WorkflowStateManager:
     @staticmethod
     async def get_original_request(project_id: str) -> str:
         """Get original user request."""
-        session = await WorkflowSession.find_one(WorkflowSession.project_id == project_id)
+        session = await WorkflowSession.find_one({"project_id": project_id})
         return session.original_request if (session and session.original_request) else ""
     
     @staticmethod
@@ -183,7 +183,7 @@ class WorkflowStateManager:
     @staticmethod
     async def cleanup(project_id: str) -> None:
         """Clean up state (stop running, unpause). Does NOT clear completed_steps for resume."""
-        session = await WorkflowSession.find_one(WorkflowSession.project_id == project_id)
+        session = await WorkflowSession.find_one({"project_id": project_id})
         if session:
             session.is_running = False
             session.is_paused = False
@@ -200,7 +200,7 @@ class WorkflowStateManager:
         workflow is stuck and wants to force-unblock it.
         """
         async with _workflow_lock:
-            session = await WorkflowSession.find_one(WorkflowSession.project_id == project_id)
+            session = await WorkflowSession.find_one({"project_id": project_id})
             if session:
                 session.is_running = False
                 session.is_paused = False
@@ -235,25 +235,25 @@ class WorkflowStateManager:
     @staticmethod
     async def get_completed_steps(project_id: str) -> List[str]:
         """Get list of completed steps for a project."""
-        session = await WorkflowSession.find_one(WorkflowSession.project_id == project_id)
+        session = await WorkflowSession.find_one({"project_id": project_id})
         return session.completed_steps if session else []
     
     @staticmethod
     async def get_step_context(project_id: str) -> Dict[str, Any]:
         """Get saved step context for resume."""
-        session = await WorkflowSession.find_one(WorkflowSession.project_id == project_id)
+        session = await WorkflowSession.find_one({"project_id": project_id})
         return session.step_context if session else {}
     
     @staticmethod
     async def get_current_step(project_id: str) -> Optional[str]:
         """Get last completed step."""
-        session = await WorkflowSession.find_one(WorkflowSession.project_id == project_id)
+        session = await WorkflowSession.find_one({"project_id": project_id})
         return session.current_step if session else None
     
     @staticmethod
     async def clear_progress(project_id: str) -> None:
         """Clear all progress for a fresh start."""
-        session = await WorkflowSession.find_one(WorkflowSession.project_id == project_id)
+        session = await WorkflowSession.find_one({"project_id": project_id})
         if session:
             session.completed_steps = []
             session.step_context = {}
@@ -264,7 +264,7 @@ class WorkflowStateManager:
     @staticmethod
     async def has_progress(project_id: str) -> bool:
         """Check if project has any saved progress."""
-        session = await WorkflowSession.find_one(WorkflowSession.project_id == project_id)
+        session = await WorkflowSession.find_one({"project_id": project_id})
         return bool(session and session.completed_steps)
 
     @staticmethod

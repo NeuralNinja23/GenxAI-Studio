@@ -178,7 +178,7 @@ def tool(
     required=True,
 )
 async def tool_subagentcaller(args: Dict[str, Any]) -> Dict[str, Any]:
-    """Core LLM caller - delegates to Marcus/sub-agents."""
+    """Core LLM caller - dispatches generation and orchestration tasks."""
     # Dispatches through materialization layer for governance
     from app.tools.materializers import materializer_dispatcher
     return await materializer_dispatcher(args)

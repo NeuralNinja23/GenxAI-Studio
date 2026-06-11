@@ -184,9 +184,8 @@ async def tool_sub_agent_caller(args: Dict[str, Any]) -> Dict[str, Any]:
     """
     V4 Sub-Agent Caller — STUB (Stage 6 pending).
 
-    V3 sub-agent system (marcus_call_sub_agent, run_sub_agent) has been
-    permanently removed. V4 bounded faculty system will be wired here
-    in Stage 6.
+    V3 sub-agent system has been permanently removed.
+    V4 bounded faculty system will be wired here in Stage 6.
     """
     return {
         "success": False,

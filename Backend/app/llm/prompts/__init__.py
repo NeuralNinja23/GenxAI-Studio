@@ -2,12 +2,6 @@
 """
 Agent prompts - organized by agent.
 """
-from .marcus import MARCUS_PROMPT, MARCUS_SUPERVISION_PROMPT
-# app/llm/prompts/__init__.py
-"""
-Agent prompts - organized by agent.
-"""
-from .marcus import MARCUS_PROMPT, MARCUS_SUPERVISION_PROMPT
 from .derek import DEREK_PROMPT
 from .luna import LUNA_PROMPT
 from .victoria import VICTORIA_PROMPT
@@ -21,7 +15,6 @@ from .responsive_reasoner import RESPONSIVE_REASONER_PROMPT
 from .builder import BUILDER_PROMPT
 
 __all__ = [
-    "MARCUS_PROMPT", "MARCUS_SUPERVISION_PROMPT",
     "DEREK_PROMPT",
     "LUNA_PROMPT",
     "VICTORIA_PROMPT",

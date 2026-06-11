@@ -24,8 +24,8 @@ _DB_PATH = os.path.normpath(_DB_PATH)
 
 class ScreenshotAnalyzer:
     """
-    Renders the frontend workspace, captures visual layouts, triggers Marcus
-    vision assessments, and persists screenshots + scores in SQLite.
+    Renders the frontend workspace, captures visual layouts, performs
+    visual governance analysis, and persists screenshots + scores in SQLite.
     """
 
     def __init__(self, db_path: str = _DB_PATH):
@@ -132,15 +132,15 @@ class ScreenshotAnalyzer:
         project_type: str = "web_app"
     ) -> Dict[str, Any]:
         """
-        Invokes Marcus visual review to score the layout and persists
+        Invokes visual governance review to score the layout and persists
         the results in the SQLite visual memory database.
         """
-        log("VISUAL_MEMORY", f"Analyzing screenshot at {image_path} via Marcus Visual Review")
+        log("VISUAL_MEMORY", f"Analyzing screenshot at {image_path} via Visual Governance Review")
         
         prompt = f"""
-You are **Marcus**, GenxAI Studio's Governance Conscience.
+You are a Visual Governance Analyst.
 Perform a Visual Critique of the rendered UI screenshot for project '{project_id}' (screen: '{screen_id}').
-
+Evaluate visual quality objectively and return scores.
 Grade the layout strictly on the following five visual parameters (from 0.0 to 1.0):
 1. **Hierarchy**: Contrast, typographical scaling, and element importance.
 2. **Density**: Space utilization and layout clutter avoidance.
@@ -171,10 +171,10 @@ Output EXCLUSIVELY a valid JSON object matching this schema:
         }
         
         try:
-            # Marcus vision call
+            # Visual governance analysis call
             raw_response = await call_llm(
                 prompt=prompt,
-                system_prompt="You are Marcus, conducting visual UI governance analysis.",
+                system_prompt="You are a Visual Governance Analyst conducting visual UI evaluation.",
                 temperature=0.2
             )
             
@@ -195,7 +195,7 @@ Output EXCLUSIVELY a valid JSON object matching this schema:
                 if key in parsed_scores:
                     scores[key] = float(parsed_scores[key])
                     
-            log("VISUAL_MEMORY", f"Marcus visual review scores parsed successfully: {scores}")
+            log("VISUAL_MEMORY", f"Visual governance scores parsed successfully: {scores}")
 
         except Exception as e:
             log("VISUAL_MEMORY", f"⚠️ Visual LLM analysis degraded: {e}. Utilizing deterministic heuristics.")

@@ -16,6 +16,7 @@ import re
 import ast
 from app.core.logging import log
 from app.validation.syntax_validator import validate_syntax
+from app.studio.architecture.workspace_architecture import WorkspaceArchitecture
 
 
 class WiringException(Exception): pass
@@ -53,7 +54,7 @@ def wire_router(project_path: Path, router_name: str) -> bool:
     """
     Ensure router is wired in main.py (idempotent).
     """
-    main_path = project_path / "backend" / "app" / "main.py"
+    main_path = WorkspaceArchitecture.backend_file(project_path, "app/main.py")
     if not main_path.exists():
         log("WIRING", f"⚠️ main.py not found at {main_path}")
         return False
@@ -139,7 +140,7 @@ def wire_model(project_path: Path, model_name: str) -> bool:
 
     CRITICAL FOR BEANIE ODM.
     """
-    main_path = project_path / "backend" / "app" / "main.py"
+    main_path = WorkspaceArchitecture.backend_file(project_path, "app/main.py")
     if not main_path.exists():
         log("WIRING", f"⚠️ main.py not found at {main_path}")
         return False
@@ -232,7 +233,7 @@ def wire_frontend_routes(project_path: Path, graph) -> bool:
     if not ui_nodes:
         return False
 
-    app_path = project_path / "frontend" / "src" / "App.jsx"
+    app_path = WorkspaceArchitecture.frontend_file(project_path, "src/App.jsx")
     if not app_path.exists():
         log("WIRING", f"⚠️ App.jsx not found at {app_path}")
         raise WiringException(f"WIRING_FAILURE: App.jsx not found at {app_path}")

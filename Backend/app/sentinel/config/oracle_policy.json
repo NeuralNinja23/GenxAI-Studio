@@ -1,0 +1,18 @@
+{
+  "oracle_weights": {
+    "RUNTIME_BOOT_FAILURE":   10,
+    "FRONTEND_BUILD_FAILURE":  5,
+    "UNRESOLVED_IMPORT":       3,
+    "STATE_FAILURE":           2,
+    "WARNING":                 1
+  },
+  "fallback_weight": 1,
+  "scope_escalation_threshold": 3,
+  "scope_cap": {
+    "thresholds": [
+      { "max_failures": 3,  "max_scope": "MODULE"  },
+      { "max_failures": 10, "max_scope": "FEATURE" }
+    ],
+    "default_max_scope": "WORKSPACE"
+  }
+}

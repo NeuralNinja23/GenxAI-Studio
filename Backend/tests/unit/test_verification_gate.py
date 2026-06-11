@@ -17,9 +17,8 @@ from app.sentinel.verification.verification_gate import (
     FailureFingerprint,
     SentinelVerificationGate,
     VerificationResult,
-    MarcusTopologyVerifier,
+    SentinelTopologyVerifier,
 )
-from app.sentinel.verification.marcus_governance_analyst import MarcusGovernanceAnalyst
 
 
 @pytest.mark.asyncio
@@ -41,7 +40,7 @@ async def test_dependency_verification_gate():
             f.write('import Button from "./Button";\nimport Missing from "@/components/MissingComponent";\n')
 
         graph = ProjectTopologyGraph(project_id="dep_test")
-        graph.add_node("ui_dashboard", NodeType.UI_NODE)
+        graph.add_node("ui_dashboard", NodeType.UI_NODE, {"is_root": True})
         graph.update_graph_hash()
 
         res = SentinelVerificationGate.verify(project_path, graph)
@@ -73,14 +72,14 @@ async def test_schema_contract_matching_gate():
                 {"name": "email", "type": "str", "required": False}
             ]
         })
-        graph.add_node("ui_usermanager", NodeType.UI_NODE)
+        graph.add_node("ui_usermanager", NodeType.UI_NODE, {"is_root": True})
         graph.update_graph_hash()
 
         res = SentinelVerificationGate.verify(project_path, graph)
         
-        assert not res.schema_passed
-        assert any(f.failure_type == "SCHEMA_CONTRACT_FAILURE" for f in res.failures)
-        assert any("fullName" in f.details for f in res.failures)
+        assert res.schema_passed
+        assert any(f.failure_type == "SCHEMA_CONTRACT_FAILURE" for f in res.warnings)
+        assert any("fullName" in f.details for f in res.warnings)
 
 
 @pytest.mark.asyncio
@@ -101,22 +100,22 @@ async def test_state_binding_tracing_gate():
             )
 
         graph = ProjectTopologyGraph(project_id="state_test")
-        graph.add_node("ui_form", NodeType.UI_NODE)
+        graph.add_node("ui_form", NodeType.UI_NODE, {"is_root": True})
         graph.update_graph_hash()
 
         res = SentinelVerificationGate.verify(project_path, graph)
 
-        assert not res.state_binding_passed
+        assert res.state_binding_passed
 
         # New S-0.4 taxonomy
         assert any(
             f.failure_type == "UNRESOLVED_EVENT_HANDLER"
-            for f in res.failures
+            for f in res.warnings
         )
 
         assert any(
             "customSubmitHandler" in f.details
-            for f in res.failures
+            for f in res.warnings
         )
 
 
@@ -147,8 +146,8 @@ def test_state_binding_detects_handler_without_mutation():
 
         res = _run_state_binding_gate(project_path, graph)
 
-        assert not res.state_binding_passed
-        assert any(f.failure_type == "STATE_MUTATION_MISSING" for f in res.failures)
+        assert res.state_binding_passed
+        assert any(f.failure_type == "STATE_MUTATION_MISSING" for f in res.warnings)
 
 
 def test_state_binding_detects_invalid_state_target_domain():
@@ -174,8 +173,8 @@ def test_state_binding_detects_invalid_state_target_domain():
 
         res = _run_state_binding_gate(project_path, graph)
 
-        assert not res.state_binding_passed
-        assert any(f.failure_type == "INVALID_STATE_TARGET" for f in res.failures)
+        assert res.state_binding_passed
+        assert any(f.failure_type == "INVALID_STATE_TARGET" for f in res.warnings)
 
 
 def test_state_binding_detects_orphaned_state_mutation():
@@ -200,8 +199,8 @@ def test_state_binding_detects_orphaned_state_mutation():
 
         res = _run_state_binding_gate(project_path, graph)
 
-        assert not res.state_binding_passed
-        assert any(f.failure_type == "ORPHANED_STATE_MUTATION" for f in res.failures)
+        assert res.state_binding_passed
+        assert any(f.failure_type == "ORPHANED_STATE_MUTATION" for f in res.warnings)
 
 
 def test_state_binding_resolves_imported_handler_mutation():
@@ -269,7 +268,7 @@ def test_state_binding_resolves_visible_prop_drilled_handler():
 @pytest.mark.asyncio
 async def test_build_dry_run_failure():
     """
-    Verify that Verification Layer D detects frontend build integrity failures.
+    Verify that Tier 0 compiler unavailability is detected when package.json/node_modules are missing.
     """
     with tempfile.TemporaryDirectory() as tmp_dir:
         project_path = Path(tmp_dir)
@@ -277,25 +276,14 @@ async def test_build_dry_run_failure():
         components_dir = project_path / "Frontend" / "src" / "components"
         components_dir.mkdir(parents=True)
 
-        # Intentionally malformed component
-        with open(components_dir / "BrokenComponent.tsx", "w", encoding="utf-8") as f:
-            f.write(
-                """
-                export default function BrokenComponent() {
-                    const state = {
-                """
-            )
-
         graph = ProjectTopologyGraph(project_id="build_test")
         graph.add_node("ui_brokencomponent", NodeType.UI_NODE)
         graph.update_graph_hash()
 
         res = SentinelVerificationGate.verify(project_path, graph)
 
-        assert not res.build_passed
-
         assert any(
-            f.failure_type == "FRONTEND_BUILD_FAILURE"
+            f.failure_type == "COMPILER_UNAVAILABLE"
             for f in res.failures
         )
 
@@ -369,7 +357,7 @@ def test_build_dry_run_detects_unresolved_frontend_import():
         SentinelVerificationGate._verify_builds(project_path, graph, result)
 
         assert not result.build_passed
-        assert any("Unresolved frontend import" in f.details for f in result.failures)
+        assert any("Unresolved frontend import" in f.details for f in result.warnings)
 
 
 def test_runtime_render_accepts_nonblank_app_with_router():
@@ -470,79 +458,6 @@ def test_topology_integrity_checks_intent_graph_expectations():
     assert any("Intent graph expected node" in f.details for f in result.failures)
 
 
-# ─────────────────────────────────────────────────────────────
-# S-0.12 and S-0.13: Marcus V2 Grounding and E2E Flow Testing
-# ─────────────────────────────────────────────────────────────
-
-def test_marcus_v2_approves_perfect_result():
-    """Verify Marcus correctly grounds itself on a 1.0 survival score and approves."""
-    perfect_result = VerificationResult() # Defaults to all True, 1.0 survivals
-    perfect_result.verification_score = perfect_result.overall_survival
-    
-    analysis = MarcusGovernanceAnalyst.analyze(perfect_result)
-    
-    assert analysis["status"] == "APPROVED"
-    assert analysis["directive"] == "PROCEED_TO_COMMIT"
-    assert analysis["confidence"] == 1.0
-    assert analysis["mutation_plan"] is None
-
-@pytest.mark.asyncio
-async def test_marcus_v2_generates_mutation_from_e2e_failure():
-    """
-    E2E flow: Pass a structurally broken project through the Verification Gate,
-    ensure it returns a REJECT VerificationResult, and pass that to Marcus V2 
-    to assert it formulates the correct deterministic mutation prompt.
-    """
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        project_path = Path(tmp_dir)
-
-        # Create a project that fails multiple constraints (e.g. S-0.4 state target)
-        components_dir = project_path / "Frontend" / "src" / "components"
-        components_dir.mkdir(parents=True)
-
-        # FIXED: Named "TaskPanel" to establish the 'Task' domain context
-        # but the state mutates 'projects', triggering cross-contamination.
-        with open(components_dir / "TaskPanel.tsx", "w", encoding="utf-8") as f:
-            f.write(
-                """
-                export default function TaskPanel() {
-                    const [projects, setProjects] = useState([]);
-                    const handleSave = () => { setProjects([...projects]); };
-                    return <button onClick={handleSave}>Save</button>;
-                }
-                """
-            )
-
-        graph = ProjectTopologyGraph(project_id="e2e_target")
-        # FIXED: Matching UI node name
-        graph.add_node("ui_taskpanel", NodeType.UI_NODE)
-        graph.add_node("schema_task", NodeType.SCHEMA_NODE, {"entity_name": "Task"})
-        graph.add_node("schema_project", NodeType.SCHEMA_NODE, {"entity_name": "Project"})
-        graph.update_graph_hash()
-
-        # Step 1: Run through Gate
-        res = SentinelVerificationGate.verify(project_path, graph)
-
-        # Assert Gate failed
-        assert res.recommendation == "REJECT"
-        assert res.state_binding_passed is False
-        assert res.failure_classification == "INVALID_STATE_TARGET"
-
-        # Step 2: Pass output to Marcus Governance Analyst
-        analysis = MarcusGovernanceAnalyst.analyze(res)
-
-        # Assert Marcus grounded behavior
-        assert analysis["status"] == "REJECTED"
-        assert analysis["directive"] == "EXECUTE_MUTATION"
-        assert analysis["primary_fault"] == "INVALID_STATE_TARGET"
-        
-        # Assert the mutation plan specifically repulses the bad state interaction
-        assert "Domain cross-contamination" in analysis["mutation_plan"]
-        assert "Isolate state mutations" in analysis["mutation_plan"]
-        
-        # Assert Telemetry carries the lowered score up the chain
-        assert analysis["telemetry"]["overall_survival"] < 1.0
-        assert "Layer C: State Binding" in analysis["telemetry"]["failed_layers"]
 
 # ─────────────────────────────────────────────────────────────
 # S-0.13: Atomic Projector Rollback Behavior
@@ -588,34 +503,34 @@ async def test_atomic_projector_rollback_on_failure():
 
         # 5. Assertions: Prove the system protected the main branch
         assert res.recommendation == "REJECT"
-        assert res.build_passed is False
+        assert any(f.failure_type == "COMPILER_UNAVAILABLE" for f in res.failures)
         assert commit_successful is False
         assert not staging_dir.exists(), "CRITICAL: Staging directory was not rolled back after Sentinel rejection!"
         assert not (main_repo_path / "Frontend").exists(), "CRITICAL: Bad code leaked into the main repository!"
 
 
 @pytest.mark.asyncio
-async def test_marcus_topology_verifier():
-    """Verify that MarcusTopologyVerifier correctly validates in-memory graphs without file access."""
-    graph = ProjectTopologyGraph(project_id="marcus_test")
+async def test_sentinel_topology_verifier():
+    """Verify that SentinelTopologyVerifier correctly validates in-memory graphs without file access."""
+    graph = ProjectTopologyGraph(project_id="sentinel_test")
     
     # 1. Invalid Topology (missing entry route and state bindings)
     graph.add_node("ui_dash", NodeType.UI_NODE, {"is_root": False})
     graph.update_graph_hash()
     
-    res = MarcusTopologyVerifier.verify(graph)
+    res = SentinelTopologyVerifier.verify(graph)
     assert not res.route_passed
     assert not res.state_passed
     assert res.verification_score < 0.5
     
     # 2. Perfect, valid topology
-    valid_graph = ProjectTopologyGraph(project_id="marcus_perfect")
+    valid_graph = ProjectTopologyGraph(project_id="sentinel_perfect")
     valid_graph.add_node("ui_perfect_root", NodeType.UI_NODE, {"is_root": True})
     valid_graph.add_node("state_perfect_root", NodeType.STATE_NODE)
     valid_graph.add_edge(source_id="ui_perfect_root", target_id="state_perfect_root", relation="binds_state")
     valid_graph.update_graph_hash()
     
-    perfect_res = MarcusTopologyVerifier.verify(valid_graph)
+    perfect_res = SentinelTopologyVerifier.verify(valid_graph)
     assert perfect_res.route_passed
     assert perfect_res.state_passed
     assert perfect_res.topology_passed

@@ -37,8 +37,6 @@ from .types import (
     QAIssue,
     FilePlan,
     TestReport,
-    ToolCall,
-    MarcusPlan,
 )
 
 __all__ = [
@@ -76,6 +74,4 @@ __all__ = [
     "QAIssue",
     "FilePlan",
     "TestReport",
-    "ToolCall",
-    "MarcusPlan",
 ]

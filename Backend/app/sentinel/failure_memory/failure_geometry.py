@@ -104,7 +104,8 @@ class FailureGeometry:
         verification_stage: Optional[str] = None,
         error_field: Optional[str] = None,
         error_file: Optional[str] = None,
-        error_component: Optional[str] = None
+        error_component: Optional[str] = None,
+        status: str = "CANDIDATE"
     ):
         """Atomically forwards S-0 error detail profiles to MemoryAccessLayer."""
         self.mal.insert_failure_record(
@@ -116,7 +117,8 @@ class FailureGeometry:
             verification_stage=verification_stage,
             error_field=error_field,
             error_file=error_file,
-            error_component=error_component
+            error_component=error_component,
+            status=status
         )
 
     def get_all_failures(self) -> list:
@@ -126,6 +128,123 @@ class FailureGeometry:
             # Reconstruct legacy FailureGeometry output tuple (f_id, vec, err_class, cyc_id, details)
             res.append((r[0], r[1], r[2], r[3], r[4]))
         return res
+
+    def get_committed_failures(self) -> list:
+        records = self.mal.load_repulsion_records()
+        res = []
+        for r in records:
+            # Reconstruct legacy FailureGeometry output tuple (f_id, vec, err_class, cyc_id, details)
+            res.append((r[0], r[1], r[2], r[3], r[4]))
+        return res
+
+    @classmethod
+    def encode_state(
+        cls,
+        failures: List[Any],
+        graph: Any,
+        mutation_tier: int = 1
+    ) -> np.ndarray:
+        from app.sentinel.topology.node_types import NodeType
+        
+        # Determine if cyclic
+        is_cyclic = any("cycle" in str(f.details).lower() for f in failures)
+        
+        # Determine failure classes present
+        failure_types = {f.failure_type for f in failures}
+        
+        # Calculate totals
+        node_count = len(graph.nodes)
+        edge_count = len(graph.edges)
+        ui_node_count = sum(1 for n in graph.nodes.values() if n.node_type == NodeType.UI_NODE)
+        api_node_count = sum(1 for n in graph.nodes.values() if n.node_type == NodeType.API_NODE)
+        schema_node_count = sum(1 for n in graph.nodes.values() if n.node_type == NodeType.SCHEMA_NODE)
+        
+        error_len = sum(len(f.details) for f in failures)
+        
+        # Compute instability values across all failures
+        structural_instability = 0.0
+        if is_cyclic or any(t in ("TOPOLOGY_INTEGRITY_FAILURE", "WIRING_FAILURE") for t in failure_types):
+            structural_instability += 2.0
+        if any(t in ("topology", "TOPOLOGY_INTEGRITY_FAILURE", "WIRING_FAILURE") for t in failure_types):
+            structural_instability += 0.5
+        if mutation_tier >= 4:
+            structural_instability += 0.3
+
+        total_nodes = max(1, node_count)
+        visual_density_raw = ui_node_count / total_nodes
+        visual_density = 0.25 * visual_density_raw
+        if "VISUAL_RENDER_FAILURE" in failure_types:
+            visual_density += 0.5
+
+        semantic_incoherence = (api_node_count + schema_node_count) / total_nodes
+        if any(t in ("semantic", "conflict", "SCHEMA_CONTRACT_FAILURE", "UNRESOLVED_IMPORT_FAILURE") for t in failure_types):
+            semantic_incoherence += 0.5
+
+        runtime_instability = mutation_tier / 5.0
+        if any(t in ("runtime", "FRONTEND_BUILD_FAILURE", "BACKEND_BUILD_FAILURE", "RUNTIME_BOOT_FAILURE", "HEALTH_CHECK_FAILURE") for t in failure_types):
+            runtime_instability += 0.5
+        if "WIRING_FAILURE" in failure_types:
+            runtime_instability += 0.2
+
+        ux_entropy = min(1.0, error_len / 1000.0)
+        if "STATE_BINDING_FAILURE" in failure_types:
+            ux_entropy += 0.4
+        if "TOPOLOGY_INTEGRITY_FAILURE" in failure_types:
+            ux_entropy += 0.1
+
+        vec = np.array([
+            structural_instability,
+            visual_density,
+            semantic_incoherence,
+            runtime_instability,
+            ux_entropy
+        ], dtype=float)
+
+        norm = np.linalg.norm(vec)
+        if norm > 0:
+            vec = vec / norm
+
+        import logging
+        logger = logging.getLogger("sentinel")
+        logger.info(
+            "[GEOMETRY_DIAGNOSTICS] "
+            f"failures={len(failures)} "
+            f"nodes={node_count} "
+            f"edges={edge_count}"
+        )
+        logger.info(
+            f"encoded_vector={vec.tolist()}"
+        )
+
+        return vec
+
+    def insert_state_failure(
+        self,
+        failure_id: str,
+        vector: np.ndarray,
+        error_class: str = "",
+        cycle_id: str = "",
+        details: str = "",
+        verification_stage: Optional[str] = None,
+        status: str = "candidate",
+        failure_count: Optional[int] = None,
+        failure_type_histogram: Optional[str] = None,
+        state_hash: Optional[str] = None
+    ):
+        """Atomically forwards S-0 state-level error detail profiles to MemoryAccessLayer."""
+        self.mal.insert_failure_record(
+            failure_id=failure_id,
+            vector=vector,
+            error_class=error_class,
+            cycle_id=cycle_id,
+            details=details,
+            verification_stage=verification_stage,
+            status=status,
+            failure_count=failure_count,
+            failure_type_histogram=failure_type_histogram,
+            state_hash=state_hash
+        )
+
 
 
 class TopologyHeatMap:

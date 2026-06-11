@@ -41,7 +41,7 @@ class ValidationLogger:
                 convergence REAL,
                 complexity REAL,
                 repulsion_score REAL,
-                marcus_score REAL,
+                governance_score REAL,
                 memory_hits INTEGER,
                 dependency_score REAL,
                 schema_score REAL,
@@ -53,7 +53,12 @@ class ValidationLogger:
                 final_result TEXT,
                 failure_type TEXT,
                 termination_reason TEXT,
-                duration_ms INTEGER
+                duration_ms INTEGER,
+                primary_failure_category TEXT,
+                active_failure_categories TEXT,
+                routing_decision TEXT,
+                routing_reason TEXT,
+                search_outcome TEXT
             )
             """)
 
@@ -68,7 +73,7 @@ class ValidationLogger:
                 convergence REAL,
                 complexity REAL,
                 repulsion_score REAL,
-                marcus_mod REAL,
+                advisory_mod REAL,
                 governance_passed BOOLEAN,
                 selected BOOLEAN,
                 failure_type TEXT,
@@ -124,6 +129,19 @@ class ValidationLogger:
             """)
 
             cursor.execute("""
+            CREATE TABLE IF NOT EXISTS skill_usage_events (
+                event_id TEXT PRIMARY KEY,
+                run_id TEXT,
+                timestamp DATETIME,
+                faculty TEXT,
+                skill_id TEXT,
+                intent TEXT,
+                used BOOLEAN,
+                FOREIGN KEY(run_id) REFERENCES projection_runs(run_id)
+            )
+            """)
+
+            cursor.execute("""
             CREATE TABLE IF NOT EXISTS system_events (
                 event_id TEXT PRIMARY KEY,
                 run_id TEXT,
@@ -164,6 +182,28 @@ class ValidationLogger:
             )
             """)
             
+            # Idempotent schema migration for routing fields and renamed fields
+            for col, col_type in [
+                ("primary_failure_category", "TEXT"),
+                ("active_failure_categories", "TEXT"),
+                ("routing_decision", "TEXT"),
+                ("routing_reason", "TEXT"),
+                ("search_outcome", "TEXT"),
+                ("governance_score", "REAL"),
+            ]:
+                try:
+                    cursor.execute(f"ALTER TABLE projection_runs ADD COLUMN {col} {col_type};")
+                except sqlite3.OperationalError:
+                    pass
+
+            for col, col_type in [
+                ("advisory_mod", "REAL"),
+            ]:
+                try:
+                    cursor.execute(f"ALTER TABLE branch_runs ADD COLUMN {col} {col_type};")
+                except sqlite3.OperationalError:
+                    pass
+
             conn.commit()
 
     @classmethod
@@ -185,10 +225,11 @@ class ValidationLogger:
                     cursor.execute("""
                     INSERT OR REPLACE INTO projection_runs (
                         run_id, timestamp, project_id, prompt, state_fingerprint, selected_branch, branch_count,
-                        final_weight, convergence, complexity, repulsion_score, marcus_score, memory_hits,
+                        final_weight, convergence, complexity, repulsion_score, governance_score, memory_hits,
                         dependency_score, schema_score, state_score, build_score, runtime_score, visual_score,
-                        topology_score, final_result, failure_type, termination_reason, duration_ms
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        topology_score, final_result, failure_type, termination_reason, duration_ms,
+                        primary_failure_category, active_failure_categories, routing_decision, routing_reason, search_outcome
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """, (
                         run_id,
                         datetime.datetime.utcnow().isoformat(),
@@ -201,7 +242,7 @@ class ValidationLogger:
                         p.get("convergence"),
                         p.get("complexity"),
                         p.get("repulsion_score"),
-                        p.get("marcus_score"),
+                        p.get("governance_score"),
                         p.get("memory_hits"),
                         p.get("dependency_score"),
                         p.get("schema_score"),
@@ -213,14 +254,19 @@ class ValidationLogger:
                         p.get("final_result"),
                         p.get("failure_type"),
                         p.get("termination_reason"),
-                        p.get("duration_ms")
+                        p.get("duration_ms"),
+                        p.get("primary_failure_category"),
+                        json.dumps(p.get("active_failure_categories", [])) if isinstance(p.get("active_failure_categories"), list) else json.dumps([]),
+                        p.get("routing_decision"),
+                        p.get("routing_reason"),
+                        p.get("search_outcome")
                     ))
                 
                 elif e_type == "branch_run":
                     cursor.execute("""
                     INSERT OR REPLACE INTO branch_runs (
                         branch_id, run_id, parent_branch, state_fingerprint, mutation_type, weight,
-                        convergence, complexity, repulsion_score, marcus_mod, governance_passed, selected, failure_type
+                        convergence, complexity, repulsion_score, advisory_mod, governance_passed, selected, failure_type
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """, (
                         p.get("branch_id"),
@@ -232,7 +278,7 @@ class ValidationLogger:
                         p.get("convergence"),
                         p.get("complexity"),
                         p.get("repulsion_score"),
-                        p.get("marcus_mod"),
+                        p.get("advisory_mod"),
                         p.get("governance_passed"),
                         p.get("selected"),
                         p.get("failure_type")
@@ -292,6 +338,21 @@ class ValidationLogger:
                         p.get("score_after"),
                         p.get("action"),
                         p.get("reason")
+                    ))
+                
+                elif e_type == "skill_usage_event":
+                    cursor.execute("""
+                    INSERT OR REPLACE INTO skill_usage_events (
+                        event_id, run_id, timestamp, faculty, skill_id, intent, used
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        p.get("event_id"),
+                        run_id,
+                        datetime.datetime.utcnow().isoformat(),
+                        p.get("faculty"),
+                        p.get("skill_id"),
+                        p.get("intent"),
+                        p.get("used")
                     ))
                 
                 elif e_type == "system_event":

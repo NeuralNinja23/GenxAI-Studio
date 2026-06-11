@@ -38,8 +38,10 @@ class PatchIRNormalizer:
         "ADD_NODE",
         "MODIFY_NODE",
         "DELETE_NODE",
+        "REMOVE_NODE",
         "ADD_EDGE",
         "DELETE_EDGE",
+        "REMOVE_EDGE",
     }
 
     EXECUTION_ORDER = {
@@ -47,7 +49,9 @@ class PatchIRNormalizer:
         "MODIFY_NODE": 2,
         "ADD_EDGE": 3,
         "DELETE_EDGE": 4,
+        "REMOVE_EDGE": 4,
         "DELETE_NODE": 5,
+        "REMOVE_NODE": 5,
     }
 
     @classmethod
@@ -114,6 +118,12 @@ class PatchIRNormalizer:
         stabilizes mutation ordering, validates referential integrity,
         and returns a standardized list of type-safe PatchIR objects.
         """
+        from app.core.logging import log
+
+        if isinstance(raw_proposals, str):
+            log("PATCH_DEBUG", f"RAW_VICTORIA_OUTPUT={raw_proposals[:5000]}")
+        else:
+            log("PATCH_DEBUG", f"RAW_VICTORIA_OUTPUT=list_of_{len(raw_proposals)}_items")
 
         parsed_list: List[Dict[str, Any]] = []
 
@@ -140,6 +150,8 @@ class PatchIRNormalizer:
                     obj_match = re.search(r"(\{\s*\"[\s\S]*\}\s*)", cleaned_str)
                     if obj_match:
                         cleaned_str = obj_match.group(1).strip()
+                        
+            log("PATCH_DEBUG", f"PARSER_INPUT={cleaned_str[:1000]}")
 
             try:
                 data = json.loads(cleaned_str)
@@ -151,6 +163,7 @@ class PatchIRNormalizer:
                     parsed_list = [data]
 
             except Exception as e:
+                log("PATCH_DEBUG", f"PARSE_FAILED={str(e)}")
                 # High-fidelity diagnostic log to secure sensory visibility
                 log(
                     "COGNITION", 
@@ -166,6 +179,10 @@ class PatchIRNormalizer:
         normalized_patches: List[PatchIR] = []
         seen_patch_ids = set()
 
+        total_raw = len(parsed_list)
+        total_parsed = 0
+        total_rejected = 0
+
         # ---------------------------------------------------
         # 2. Normalize PatchIR Objects
         # ---------------------------------------------------
@@ -173,26 +190,39 @@ class PatchIRNormalizer:
         for item in parsed_list:
 
             if not isinstance(item, dict):
+                log("PATCH_DEBUG", f"PATCH_REJECTED reason='Not a dict' item={str(item)[:100]}")
+                total_rejected += 1
                 continue
 
             patch_id = item.get("patch_id")
             target_node_id = item.get("target_node_id")
             action = item.get("action")
+            
+            action_upper = str(action).upper().strip() if action else ""
+
+            # For edges, the target_node_id might be omitted at the top level
+            if action_upper in ("ADD_EDGE", "REMOVE_EDGE") and not target_node_id:
+                edge_data = item.get("edge_data") or {}
+                if isinstance(edge_data, dict):
+                    target_node_id = edge_data.get("target") or edge_data.get("source") or "edge"
 
             # Require minimum structural fields
             if not patch_id or not target_node_id or not action:
+                log("PATCH_DEBUG", f"PATCH_REJECTION\naction={action}\nreason=missing_required_fields\nraw_patch={item}")
+                total_rejected += 1
                 continue
 
-            # Standardize action
-            action_upper = str(action).upper().strip()
-
             if action_upper not in cls.VALID_ACTIONS:
+                log("PATCH_DEBUG", f"PATCH_REJECTION\naction={action_upper}\nreason=invalid_action\nraw_patch={item}")
+                total_rejected += 1
                 continue
 
             # Deduplicate patch IDs
             patch_id_clean = cls.canonicalize_id(str(patch_id))
 
             if patch_id_clean in seen_patch_ids:
+                log("PATCH_DEBUG", f"PATCH_REJECTED reason='Duplicate patch ID' patch_id={patch_id_clean}")
+                total_rejected += 1
                 continue
 
             seen_patch_ids.add(patch_id_clean)
@@ -268,16 +298,17 @@ class PatchIRNormalizer:
             # Build normalized PatchIR
             # ---------------------------------------------------
 
-            normalized_patches.append(
-                PatchIR(
-                    patch_id=patch_id_clean,
-                    target_node_id=target_node_id_clean,
-                    mutation_tier=mutation_tier,
-                    action=action_upper,
-                    node_data=node_data,
-                    edge_data=edge_data,
-                )
+            patch = PatchIR(
+                patch_id=patch_id_clean,
+                target_node_id=target_node_id_clean,
+                mutation_tier=mutation_tier,
+                action=action_upper,
+                node_data=node_data,
+                edge_data=edge_data,
             )
+            normalized_patches.append(patch)
+            total_parsed += 1
+            log("PATCH_DEBUG", f"PATCH_ACCEPTED type={patch.mutation_tier.name} node={patch.target_node_id}")
 
         # ---------------------------------------------------
         # 3. Deterministic mutation ordering
@@ -295,5 +326,8 @@ class PatchIRNormalizer:
             normalized_patches,
             existing_nodes,
         )
+
+        total_applied = len(normalized_patches)
+        log("PATCH_DEBUG", f"PATCH_STATS\nraw={total_raw}\nparsed={total_parsed}\nrejected={total_rejected}\napplied={total_applied}")
 
         return normalized_patches

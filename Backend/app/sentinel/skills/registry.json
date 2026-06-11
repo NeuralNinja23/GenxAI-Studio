@@ -1,0 +1,1502 @@
+[
+  {
+    "id": "accessibility",
+    "version": "1.0",
+    "faculty": "Sophia",
+    "domain": "design",
+    "tags": [
+      "accessibility"
+    ],
+    "file": "skill/accessibility.md",
+    "active": true
+  },
+  {
+    "id": "brand-voice",
+    "version": "1.0",
+    "faculty": "Sophia",
+    "domain": "design",
+    "tags": [
+      "brand",
+      "voice"
+    ],
+    "file": "skill/brand-voice.md",
+    "active": true
+  },
+  {
+    "id": "design-system",
+    "version": "1.0",
+    "faculty": "Sophia",
+    "domain": "design",
+    "tags": [
+      "design",
+      "system"
+    ],
+    "file": "skill/design-system.md",
+    "active": true
+  },
+  {
+    "id": "frontend-a11y",
+    "version": "1.0",
+    "faculty": "Sophia",
+    "domain": "design",
+    "tags": [
+      "frontend",
+      "a11y"
+    ],
+    "file": "skill/frontend-a11y.md",
+    "active": true
+  },
+  {
+    "id": "frontend-design-direction",
+    "version": "1.0",
+    "faculty": "Sophia",
+    "domain": "design",
+    "tags": [
+      "frontend",
+      "design",
+      "direction"
+    ],
+    "file": "skill/frontend-design-direction.md",
+    "active": true
+  },
+  {
+    "id": "liquid-glass-design",
+    "version": "1.0",
+    "faculty": "Sophia",
+    "domain": "design",
+    "tags": [
+      "liquid",
+      "glass",
+      "design"
+    ],
+    "file": "skill/liquid-glass-design.md",
+    "active": true
+  },
+  {
+    "id": "make-interfaces-feel-better",
+    "version": "1.0",
+    "faculty": "Sophia",
+    "domain": "design",
+    "tags": [
+      "make",
+      "interfaces",
+      "feel",
+      "better"
+    ],
+    "file": "skill/make-interfaces-feel-better.md",
+    "active": true
+  },
+  {
+    "id": "motion-foundations",
+    "version": "1.0",
+    "faculty": "Sophia",
+    "domain": "design",
+    "tags": [
+      "motion",
+      "foundations"
+    ],
+    "file": "skill/motion-foundations.md",
+    "active": true
+  },
+  {
+    "id": "product-capability",
+    "version": "1.0",
+    "faculty": "Sophia",
+    "domain": "design",
+    "tags": [
+      "product",
+      "capability"
+    ],
+    "file": "skill/product-capability.md",
+    "active": true
+  },
+  {
+    "id": "product-lens",
+    "version": "1.0",
+    "faculty": "Sophia",
+    "domain": "design",
+    "tags": [
+      "product",
+      "lens"
+    ],
+    "file": "skill/product-lens.md",
+    "active": true
+  },
+  {
+    "id": "react-patterns",
+    "version": "1.0",
+    "faculty": "Victoria",
+    "domain": "frontend",
+    "tags": [
+      "react",
+      "patterns"
+    ],
+    "file": "skill/react-patterns.md",
+    "active": true
+  },
+  {
+    "id": "react-performance",
+    "version": "1.0",
+    "faculty": "Victoria",
+    "domain": "frontend",
+    "tags": [
+      "react",
+      "performance"
+    ],
+    "file": "skill/react-performance.md",
+    "active": true
+  },
+  {
+    "id": "react-testing",
+    "version": "1.0",
+    "faculty": "Victoria",
+    "domain": "frontend",
+    "tags": [
+      "react",
+      "testing"
+    ],
+    "file": "skill/react-testing.md",
+    "active": true
+  },
+  {
+    "id": "angular-developer",
+    "version": "1.0",
+    "faculty": "Victoria",
+    "domain": "frontend",
+    "tags": [
+      "angular",
+      "developer"
+    ],
+    "file": "skill/angular-developer.md",
+    "active": true
+  },
+  {
+    "id": "frontend-patterns",
+    "version": "1.0",
+    "faculty": "Victoria",
+    "domain": "frontend",
+    "tags": [
+      "frontend",
+      "patterns"
+    ],
+    "file": "skill/frontend-patterns.md",
+    "active": true
+  },
+  {
+    "id": "vite-patterns",
+    "version": "1.0",
+    "faculty": "Victoria",
+    "domain": "frontend",
+    "tags": [
+      "vite",
+      "patterns"
+    ],
+    "file": "skill/vite-patterns.md",
+    "active": true
+  },
+  {
+    "id": "nextjs-turbopack",
+    "version": "1.0",
+    "faculty": "Victoria",
+    "domain": "frontend",
+    "tags": [
+      "nextjs",
+      "turbopack"
+    ],
+    "file": "skill/nextjs-turbopack.md",
+    "active": true
+  },
+  {
+    "id": "dashboard-builder",
+    "version": "1.0",
+    "faculty": "Victoria",
+    "domain": "frontend",
+    "tags": [
+      "dashboard",
+      "builder"
+    ],
+    "file": "skill/dashboard-builder.md",
+    "active": true
+  },
+  {
+    "id": "motion-patterns",
+    "version": "1.0",
+    "faculty": "Victoria",
+    "domain": "frontend",
+    "tags": [
+      "motion",
+      "patterns"
+    ],
+    "file": "skill/motion-patterns.md",
+    "active": true
+  },
+  {
+    "id": "browser-qa",
+    "version": "1.0",
+    "faculty": "Victoria",
+    "domain": "frontend",
+    "tags": [
+      "browser",
+      "qa"
+    ],
+    "file": "skill/browser-qa.md",
+    "active": true
+  },
+  {
+    "id": "ui-demo",
+    "version": "1.0",
+    "faculty": "Victoria",
+    "domain": "frontend",
+    "tags": [
+      "ui",
+      "demo"
+    ],
+    "file": "skill/ui-demo.md",
+    "active": true
+  },
+  {
+    "id": "ui-to-vue",
+    "version": "1.0",
+    "faculty": "Victoria",
+    "domain": "frontend",
+    "tags": [
+      "ui",
+      "to",
+      "vue"
+    ],
+    "file": "skill/ui-to-vue.md",
+    "active": true
+  },
+  {
+    "id": "ios-icon-gen",
+    "version": "1.0",
+    "faculty": "Victoria",
+    "domain": "frontend",
+    "tags": [
+      "ios",
+      "icon",
+      "gen"
+    ],
+    "file": "skill/ios-icon-gen.md",
+    "active": true
+  },
+  {
+    "id": "swiftui-patterns",
+    "version": "1.0",
+    "faculty": "Victoria",
+    "domain": "frontend",
+    "tags": [
+      "swiftui",
+      "patterns"
+    ],
+    "file": "skill/swiftui-patterns.md",
+    "active": true
+  },
+  {
+    "id": "dart-flutter-patterns",
+    "version": "1.0",
+    "faculty": "Victoria",
+    "domain": "frontend",
+    "tags": [
+      "dart",
+      "flutter",
+      "patterns"
+    ],
+    "file": "skill/dart-flutter-patterns.md",
+    "active": true
+  },
+  {
+    "id": "api-design",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "api",
+      "design"
+    ],
+    "file": "skill/api-design.md",
+    "active": true
+  },
+  {
+    "id": "api-connector-builder",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "api",
+      "connector",
+      "builder"
+    ],
+    "file": "skill/api-connector-builder.md",
+    "active": true
+  },
+  {
+    "id": "backend-patterns",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "backend",
+      "patterns"
+    ],
+    "file": "skill/backend-patterns.md",
+    "active": true
+  },
+  {
+    "id": "fastapi-patterns",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "fastapi",
+      "patterns"
+    ],
+    "file": "skill/fastapi-patterns.md",
+    "active": true
+  },
+  {
+    "id": "nestjs-patterns",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "nestjs",
+      "patterns"
+    ],
+    "file": "skill/nestjs-patterns.md",
+    "active": true
+  },
+  {
+    "id": "django-patterns",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "django",
+      "patterns"
+    ],
+    "file": "skill/django-patterns.md",
+    "active": true
+  },
+  {
+    "id": "laravel-patterns",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "laravel",
+      "patterns"
+    ],
+    "file": "skill/laravel-patterns.md",
+    "active": true
+  },
+  {
+    "id": "springboot-patterns",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "springboot",
+      "patterns"
+    ],
+    "file": "skill/springboot-patterns.md",
+    "active": true
+  },
+  {
+    "id": "golang-patterns",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "golang",
+      "patterns"
+    ],
+    "file": "skill/golang-patterns.md",
+    "active": true
+  },
+  {
+    "id": "python-patterns",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "python",
+      "patterns"
+    ],
+    "file": "skill/python-patterns.md",
+    "active": true
+  },
+  {
+    "id": "docker-patterns",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "docker",
+      "patterns"
+    ],
+    "file": "skill/docker-patterns.md",
+    "active": true
+  },
+  {
+    "id": "deployment-patterns",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "deployment",
+      "patterns"
+    ],
+    "file": "skill/deployment-patterns.md",
+    "active": true
+  },
+  {
+    "id": "mcp-server-patterns",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "mcp",
+      "server",
+      "patterns"
+    ],
+    "file": "skill/mcp-server-patterns.md",
+    "active": true
+  },
+  {
+    "id": "x-api",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "x",
+      "api"
+    ],
+    "file": "skill/x-api.md",
+    "active": true
+  },
+  {
+    "id": "github-ops",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "github",
+      "ops"
+    ],
+    "file": "skill/github-ops.md",
+    "active": true
+  },
+  {
+    "id": "database-migrations",
+    "version": "1.0",
+    "faculty": "Luna",
+    "domain": "database",
+    "tags": [
+      "database",
+      "migrations"
+    ],
+    "file": "skill/database-migrations.md",
+    "active": true
+  },
+  {
+    "id": "postgres-patterns",
+    "version": "1.0",
+    "faculty": "Luna",
+    "domain": "database",
+    "tags": [
+      "postgres",
+      "patterns"
+    ],
+    "file": "skill/postgres-patterns.md",
+    "active": true
+  },
+  {
+    "id": "prisma-patterns",
+    "version": "1.0",
+    "faculty": "Luna",
+    "domain": "database",
+    "tags": [
+      "prisma",
+      "patterns"
+    ],
+    "file": "skill/prisma-patterns.md",
+    "active": true
+  },
+  {
+    "id": "redis-patterns",
+    "version": "1.0",
+    "faculty": "Luna",
+    "domain": "database",
+    "tags": [
+      "redis",
+      "patterns"
+    ],
+    "file": "skill/redis-patterns.md",
+    "active": true
+  },
+  {
+    "id": "clickhouse-io",
+    "version": "1.0",
+    "faculty": "Luna",
+    "domain": "database",
+    "tags": [
+      "clickhouse",
+      "io"
+    ],
+    "file": "skill/clickhouse-io.md",
+    "active": true
+  },
+  {
+    "id": "iterative-retrieval",
+    "version": "1.0",
+    "faculty": "Luna",
+    "domain": "database",
+    "tags": [
+      "iterative",
+      "retrieval"
+    ],
+    "file": "skill/iterative-retrieval.md",
+    "active": true
+  },
+  {
+    "id": "deep-research",
+    "version": "1.0",
+    "faculty": "Luna",
+    "domain": "database",
+    "tags": [
+      "deep",
+      "research"
+    ],
+    "file": "skill/deep-research.md",
+    "active": true
+  },
+  {
+    "id": "knowledge-ops",
+    "version": "1.0",
+    "faculty": "Luna",
+    "domain": "database",
+    "tags": [
+      "knowledge",
+      "ops"
+    ],
+    "file": "skill/knowledge-ops.md",
+    "active": true
+  },
+  {
+    "id": "recsys-pipeline-architect",
+    "version": "1.0",
+    "faculty": "Luna",
+    "domain": "database",
+    "tags": [
+      "recsys",
+      "pipeline",
+      "architect"
+    ],
+    "file": "skill/recsys-pipeline-architect.md",
+    "active": true
+  },
+  {
+    "id": "data-scraper-agent",
+    "version": "1.0",
+    "faculty": "Luna",
+    "domain": "database",
+    "tags": [
+      "data",
+      "scraper",
+      "agent"
+    ],
+    "file": "skill/data-scraper-agent.md",
+    "active": true
+  },
+  {
+    "id": "autonomous-loops",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "autonomous",
+      "loops"
+    ],
+    "file": "skill/autonomous-loops.md",
+    "active": true
+  },
+  {
+    "id": "continuous-agent-loop",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "continuous",
+      "agent",
+      "loop"
+    ],
+    "file": "skill/continuous-agent-loop.md",
+    "active": true
+  },
+  {
+    "id": "autonomous-agent-harness",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "autonomous",
+      "agent",
+      "harness"
+    ],
+    "file": "skill/autonomous-agent-harness.md",
+    "active": true
+  },
+  {
+    "id": "agent-harness-construction",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "agent",
+      "harness",
+      "construction"
+    ],
+    "file": "skill/agent-harness-construction.md",
+    "active": true
+  },
+  {
+    "id": "plan-orchestrate",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "plan",
+      "orchestrate"
+    ],
+    "file": "skill/plan-orchestrate.md",
+    "active": true
+  },
+  {
+    "id": "recursive-decision-ledger",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "recursive",
+      "decision",
+      "ledger"
+    ],
+    "file": "skill/recursive-decision-ledger.md",
+    "active": true
+  },
+  {
+    "id": "council",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "council"
+    ],
+    "file": "skill/council.md",
+    "active": true
+  },
+  {
+    "id": "dmux-workflows",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "dmux",
+      "workflows"
+    ],
+    "file": "skill/dmux-workflows.md",
+    "active": true
+  },
+  {
+    "id": "parallel-execution-optimizer",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "parallel",
+      "execution",
+      "optimizer"
+    ],
+    "file": "skill/parallel-execution-optimizer.md",
+    "active": true
+  },
+  {
+    "id": "agentic-engineering",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "agentic",
+      "engineering"
+    ],
+    "file": "skill/agentic-engineering.md",
+    "active": true
+  },
+  {
+    "id": "article-writing",
+    "version": "1.0",
+    "faculty": "Sophia",
+    "domain": "design",
+    "tags": [
+      "article",
+      "writing"
+    ],
+    "file": "skill/article-writing.md",
+    "active": false
+  },
+  {
+    "id": "market-research",
+    "version": "1.0",
+    "faculty": "Sophia",
+    "domain": "design",
+    "tags": [
+      "market",
+      "research"
+    ],
+    "file": "skill/market-research.md",
+    "active": false
+  },
+  {
+    "id": "motion-ui",
+    "version": "1.0",
+    "faculty": "Sophia",
+    "domain": "design",
+    "tags": [
+      "motion",
+      "ui"
+    ],
+    "file": "skill/motion-ui.md",
+    "active": false
+  },
+  {
+    "id": "strategic-compact",
+    "version": "1.0",
+    "faculty": "Sophia",
+    "domain": "design",
+    "tags": [
+      "strategic",
+      "compact"
+    ],
+    "file": "skill/strategic-compact.md",
+    "active": false
+  },
+  {
+    "id": "compose-multiplatform-patterns",
+    "version": "1.0",
+    "faculty": "Victoria",
+    "domain": "frontend",
+    "tags": [
+      "compose",
+      "multiplatform",
+      "patterns"
+    ],
+    "file": "skill/compose-multiplatform-patterns.md",
+    "active": false
+  },
+  {
+    "id": "frontend-slides",
+    "version": "1.0",
+    "faculty": "Victoria",
+    "domain": "frontend",
+    "tags": [
+      "frontend",
+      "slides"
+    ],
+    "file": "skill/frontend-slides.md",
+    "active": false
+  },
+  {
+    "id": "windows-desktop-e2e",
+    "version": "1.0",
+    "faculty": "Victoria",
+    "domain": "frontend",
+    "tags": [
+      "windows",
+      "desktop",
+      "e2e"
+    ],
+    "file": "skill/windows-desktop-e2e.md",
+    "active": false
+  },
+  {
+    "id": "nuxt4-patterns",
+    "version": "1.0",
+    "faculty": "Victoria",
+    "domain": "frontend",
+    "tags": [
+      "nuxt4",
+      "patterns"
+    ],
+    "file": "skill/nuxt4-patterns.md",
+    "active": false
+  },
+  {
+    "id": "remotion-video-creation",
+    "version": "1.0",
+    "faculty": "Victoria",
+    "domain": "frontend",
+    "tags": [
+      "remotion",
+      "video",
+      "creation"
+    ],
+    "file": "skill/remotion-video-creation.md",
+    "active": false
+  },
+  {
+    "id": "video-editing",
+    "version": "1.0",
+    "faculty": "Victoria",
+    "domain": "frontend",
+    "tags": [
+      "video",
+      "editing"
+    ],
+    "file": "skill/video-editing.md",
+    "active": false
+  },
+  {
+    "id": "videodb",
+    "version": "1.0",
+    "faculty": "Victoria",
+    "domain": "frontend",
+    "tags": [
+      "videodb"
+    ],
+    "file": "skill/videodb.md",
+    "active": false
+  },
+  {
+    "id": "kotlin-patterns",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "kotlin",
+      "patterns"
+    ],
+    "file": "skill/kotlin-patterns.md",
+    "active": false
+  },
+  {
+    "id": "kotlin-ktor-patterns",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "kotlin",
+      "ktor",
+      "patterns"
+    ],
+    "file": "skill/kotlin-ktor-patterns.md",
+    "active": false
+  },
+  {
+    "id": "quarkus-patterns",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "quarkus",
+      "patterns"
+    ],
+    "file": "skill/quarkus-patterns.md",
+    "active": false
+  },
+  {
+    "id": "dotnet-patterns",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "dotnet",
+      "patterns"
+    ],
+    "file": "skill/dotnet-patterns.md",
+    "active": false
+  },
+  {
+    "id": "bun-runtime",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "bun",
+      "runtime"
+    ],
+    "file": "skill/bun-runtime.md",
+    "active": false
+  },
+  {
+    "id": "mysql-patterns",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "mysql",
+      "patterns"
+    ],
+    "file": "skill/mysql-patterns.md",
+    "active": false
+  },
+  {
+    "id": "quarkus-tdd",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "quarkus",
+      "tdd"
+    ],
+    "file": "skill/quarkus-tdd.md",
+    "active": false
+  },
+  {
+    "id": "quarkus-verification",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "quarkus",
+      "verification"
+    ],
+    "file": "skill/quarkus-verification.md",
+    "active": false
+  },
+  {
+    "id": "springboot-tdd",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "springboot",
+      "tdd"
+    ],
+    "file": "skill/springboot-tdd.md",
+    "active": false
+  },
+  {
+    "id": "laravel-tdd",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "laravel",
+      "tdd"
+    ],
+    "file": "skill/laravel-tdd.md",
+    "active": false
+  },
+  {
+    "id": "django-tdd",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "django",
+      "tdd"
+    ],
+    "file": "skill/django-tdd.md",
+    "active": false
+  },
+  {
+    "id": "laravel-verification",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "laravel",
+      "verification"
+    ],
+    "file": "skill/laravel-verification.md",
+    "active": false
+  },
+  {
+    "id": "tinystruct-patterns",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "tinystruct",
+      "patterns"
+    ],
+    "file": "skill/tinystruct-patterns.md",
+    "active": false
+  },
+  {
+    "id": "nodejs-keccak256",
+    "version": "1.0",
+    "faculty": "Derek",
+    "domain": "backend",
+    "tags": [
+      "nodejs",
+      "keccak256"
+    ],
+    "file": "skill/nodejs-keccak256.md",
+    "active": false
+  },
+  {
+    "id": "jpa-patterns",
+    "version": "1.0",
+    "faculty": "Luna",
+    "domain": "database",
+    "tags": [
+      "jpa",
+      "patterns"
+    ],
+    "file": "skill/jpa-patterns.md",
+    "active": false
+  },
+  {
+    "id": "kotlin-exposed-patterns",
+    "version": "1.0",
+    "faculty": "Luna",
+    "domain": "database",
+    "tags": [
+      "kotlin",
+      "exposed",
+      "patterns"
+    ],
+    "file": "skill/kotlin-exposed-patterns.md",
+    "active": false
+  },
+  {
+    "id": "scientific-db-pubmed-database",
+    "version": "1.0",
+    "faculty": "Luna",
+    "domain": "database",
+    "tags": [
+      "scientific",
+      "db",
+      "pubmed",
+      "database"
+    ],
+    "file": "skill/scientific-db-pubmed-database.md",
+    "active": false
+  },
+  {
+    "id": "scientific-db-uspto-database",
+    "version": "1.0",
+    "faculty": "Luna",
+    "domain": "database",
+    "tags": [
+      "scientific",
+      "db",
+      "uspto",
+      "database"
+    ],
+    "file": "skill/scientific-db-uspto-database.md",
+    "active": false
+  },
+  {
+    "id": "scientific-pkg-gget",
+    "version": "1.0",
+    "faculty": "Luna",
+    "domain": "database",
+    "tags": [
+      "scientific",
+      "pkg",
+      "gget"
+    ],
+    "file": "skill/scientific-pkg-gget.md",
+    "active": false
+  },
+  {
+    "id": "mle-workflow",
+    "version": "1.0",
+    "faculty": "Luna",
+    "domain": "database",
+    "tags": [
+      "mle",
+      "workflow"
+    ],
+    "file": "skill/mle-workflow.md",
+    "active": false
+  },
+  {
+    "id": "inventory-demand-planning",
+    "version": "1.0",
+    "faculty": "Luna",
+    "domain": "database",
+    "tags": [
+      "inventory",
+      "demand",
+      "planning"
+    ],
+    "file": "skill/inventory-demand-planning.md",
+    "active": false
+  },
+  {
+    "id": "healthcare-emr-patterns",
+    "version": "1.0",
+    "faculty": "Luna",
+    "domain": "database",
+    "tags": [
+      "healthcare",
+      "emr",
+      "patterns"
+    ],
+    "file": "skill/healthcare-emr-patterns.md",
+    "active": false
+  },
+  {
+    "id": "healthcare-cdss-patterns",
+    "version": "1.0",
+    "faculty": "Luna",
+    "domain": "database",
+    "tags": [
+      "healthcare",
+      "cdss",
+      "patterns"
+    ],
+    "file": "skill/healthcare-cdss-patterns.md",
+    "active": false
+  },
+  {
+    "id": "search-first",
+    "version": "1.0",
+    "faculty": "Luna",
+    "domain": "database",
+    "tags": [
+      "search",
+      "first"
+    ],
+    "file": "skill/search-first.md",
+    "active": false
+  },
+  {
+    "id": "agentic-os",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "agentic",
+      "os"
+    ],
+    "file": "skill/agentic-os.md",
+    "active": false
+  },
+  {
+    "id": "continuous-learning",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "continuous",
+      "learning"
+    ],
+    "file": "skill/continuous-learning.md",
+    "active": false
+  },
+  {
+    "id": "continuous-learning-v2",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "continuous",
+      "learning",
+      "v2"
+    ],
+    "file": "skill/continuous-learning-v2.md",
+    "active": false
+  },
+  {
+    "id": "enterprise-agent-ops",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "enterprise",
+      "agent",
+      "ops"
+    ],
+    "file": "skill/enterprise-agent-ops.md",
+    "active": false
+  },
+  {
+    "id": "project-flow-ops",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "project",
+      "flow",
+      "ops"
+    ],
+    "file": "skill/project-flow-ops.md",
+    "active": false
+  },
+  {
+    "id": "unified-notifications-ops",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "unified",
+      "notifications",
+      "ops"
+    ],
+    "file": "skill/unified-notifications-ops.md",
+    "active": false
+  },
+  {
+    "id": "codebase-onboarding",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "codebase",
+      "onboarding"
+    ],
+    "file": "skill/codebase-onboarding.md",
+    "active": false
+  },
+  {
+    "id": "code-tour",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "code",
+      "tour"
+    ],
+    "file": "skill/code-tour.md",
+    "active": false
+  },
+  {
+    "id": "context-budget",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "context",
+      "budget"
+    ],
+    "file": "skill/context-budget.md",
+    "active": false
+  },
+  {
+    "id": "cost-aware-llm-pipeline",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "cost",
+      "aware",
+      "llm",
+      "pipeline"
+    ],
+    "file": "skill/cost-aware-llm-pipeline.md",
+    "active": false
+  },
+  {
+    "id": "cost-tracking",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "cost",
+      "tracking"
+    ],
+    "file": "skill/cost-tracking.md",
+    "active": false
+  },
+  {
+    "id": "prompt-optimizer",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "prompt",
+      "optimizer"
+    ],
+    "file": "skill/prompt-optimizer.md",
+    "active": false
+  },
+  {
+    "id": "rules-distill",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "rules",
+      "distill"
+    ],
+    "file": "skill/rules-distill.md",
+    "active": false
+  },
+  {
+    "id": "skill-scout",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "skill",
+      "scout"
+    ],
+    "file": "skill/skill-scout.md",
+    "active": false
+  },
+  {
+    "id": "skill-stocktake",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "skill",
+      "stocktake"
+    ],
+    "file": "skill/skill-stocktake.md",
+    "active": false
+  },
+  {
+    "id": "terminal-ops",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "terminal",
+      "ops"
+    ],
+    "file": "skill/terminal-ops.md",
+    "active": false
+  },
+  {
+    "id": "configure-ecc",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "configure",
+      "ecc"
+    ],
+    "file": "skill/configure-ecc.md",
+    "active": false
+  },
+  {
+    "id": "ecc-guide",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "ecc",
+      "guide"
+    ],
+    "file": "skill/ecc-guide.md",
+    "active": false
+  },
+  {
+    "id": "ecc-tools-cost-audit",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "ecc",
+      "tools",
+      "cost",
+      "audit"
+    ],
+    "file": "skill/ecc-tools-cost-audit.md",
+    "active": false
+  },
+  {
+    "id": "foundation-models-on-device",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "foundation",
+      "models",
+      "on",
+      "device"
+    ],
+    "file": "skill/foundation-models-on-device.md",
+    "active": false
+  },
+  {
+    "id": "hermes-imports",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "hermes",
+      "imports"
+    ],
+    "file": "skill/hermes-imports.md",
+    "active": false
+  },
+  {
+    "id": "hookify-rules",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "hookify",
+      "rules"
+    ],
+    "file": "skill/hookify-rules.md",
+    "active": false
+  },
+  {
+    "id": "nanoclaw-repl",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "nanoclaw",
+      "repl"
+    ],
+    "file": "skill/nanoclaw-repl.md",
+    "active": false
+  },
+  {
+    "id": "openclaw-persona-forge",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "openclaw",
+      "persona",
+      "forge"
+    ],
+    "file": "skill/openclaw-persona-forge.md",
+    "active": false
+  },
+  {
+    "id": "blueprint",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "blueprint"
+    ],
+    "file": "skill/blueprint.md",
+    "active": false
+  },
+  {
+    "id": "claude-devfleet",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "claude",
+      "devfleet"
+    ],
+    "file": "skill/claude-devfleet.md",
+    "active": false
+  },
+  {
+    "id": "documentation-lookup",
+    "version": "1.0",
+    "faculty": "Reggie",
+    "domain": "workflow",
+    "tags": [
+      "documentation",
+      "lookup"
+    ],
+    "file": "skill/documentation-lookup.md",
+    "active": false
+  }
+]

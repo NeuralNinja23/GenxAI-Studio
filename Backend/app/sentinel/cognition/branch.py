@@ -23,6 +23,7 @@ class BranchState(BaseModel):
     entropy_history: List[float] = Field(default_factory=list)
     repulsion_score: float = 0.0
     attention_weight: float = 1.0
+    previous_attention_weight: float = 1.0
     oracle_history: List[Dict[str, Any]] = Field(default_factory=list)
     governance: Dict[str, Any] = Field(default_factory=dict)
     lineage_path: List[str] = Field(default_factory=list)
@@ -30,6 +31,10 @@ class BranchState(BaseModel):
     is_pruned: bool = False
     is_committed: bool = False
     needs_stabilization: bool = False
+    failure_signals: List[Dict[str, Any]] = Field(default_factory=list)
+    is_stable: bool = True
+    goal_completion_rate: float = 1.0
+    goals: List[Dict[str, Any]] = Field(default_factory=list)
 
     def clone_graph(self) -> ProjectTopologyGraph:
         """Create a deep copy of the active topology graph."""
@@ -112,6 +117,7 @@ class BranchTreeManager:
             entropy_history=copy.deepcopy(parent_branch.entropy_history),
             repulsion_score=parent_branch.repulsion_score,
             attention_weight=parent_branch.attention_weight,
+            previous_attention_weight=parent_branch.attention_weight,
             lineage_path=lineage
         )
         self.active_branches[child.branch_id] = child

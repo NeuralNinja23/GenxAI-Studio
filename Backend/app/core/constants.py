@@ -52,10 +52,10 @@ TEST_FILE_MIN_TOKENS = 12000
 # Agent Names
 class AgentName:
     """Agent identifiers."""
-    MARCUS = "Marcus"
     DEREK = "Derek"
     LUNA = "Luna"
     VICTORIA = "Victoria"
+    
 
 
 # ═══════════════════════════════════════════════════════

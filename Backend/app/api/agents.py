@@ -14,11 +14,7 @@ async def get_agents_status():
     """Get status of all agents."""
     return {
         "agents": [
-            {
-                "name": AgentName.MARCUS,
-                "role": "Lead Architect & Supervisor",
-                "status": "available",
-            },
+
             {
                 "name": AgentName.VICTORIA,
                 "role": "Software Architect", 

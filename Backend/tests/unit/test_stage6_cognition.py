@@ -47,7 +47,7 @@ from app.sentinel.cognition.convergence_engine import ConvergenceEngine
 
 from app.sentinel.cognition.attention_router import AttentionRouter
 
-from app.sentinel.cognition.mutation_engine import MutationEngine
+from app.studio.mutation.mutation_engine import MutationEngine
 
 from app.sentinel.cognition.sentinel_core import SentinelCore
 
@@ -56,19 +56,10 @@ from app.sentinel.failure_memory.failure_geometry import FailureGeometry
 from app.sentinel.failure_memory.repulsion_engine import RepulsionEngine
 from app.sentinel.topology.ast_projector import ASTProjector
 
-from app.agents.sub_agents import (
-
-    VictoriaUIFaculty,
-
-    DerekAPIFaculty,
-
-    LunaSchemaFaculty,
-
-    ReggieWorkflowFaculty,
-
-    MarcusGovernanceAnalyst,
-
-)
+from app.studio.faculties.victoria import VictoriaUIFaculty
+from app.studio.faculties.derek import DerekAPIFaculty
+from app.studio.faculties.luna import LunaSchemaFaculty
+from app.studio.faculties.reggie import ReggieWorkflowFaculty
 
 
 
@@ -392,7 +383,7 @@ def test_repulsion_engine_deflection():
 
     err_vec = FailureGeometry.encode_failure(5, 5, False, "syntax", 2, 50, 1, 3, 1)
 
-    geom.insert_failure("fail-sim", err_vec, "syntax", "c-1", "Syntax check failed")
+    geom.insert_failure("fail-sim", err_vec, "syntax", "c-1", "Syntax check failed", status="COMMITTED")
 
 
 
@@ -524,73 +515,6 @@ def test_attention_router_budget_pruning(base_graph):
 
 
 
-@pytest.mark.asyncio
-
-async def test_marcus_governance_analyst_scoring(base_graph):
-
-    # Branch displays high repulsion score
-
-    unstable_branch = BranchState(
-
-        branch_id="unstable-b",
-
-        topology_graph=base_graph,
-
-        repulsion_score=0.7
-
-    )
-
-
-
-    mock_response = json.dumps({
-
-        "governance_decision": "REJECT",
-
-        "metrics": {
-
-            "branch_entropy": 0.8,
-
-            "topology_drift": 0.9,
-
-            "repulsion_index": 0.7
-
-        },
-
-        "issues": [{"severity": "error", "description": "Severe repulsion index failure."}]
-
-    })
-
-
-
-    with patch("app.agents.sub_agents.call_llm", new_callable=AsyncMock) as mock_call, \
-         patch("app.agents.sub_agents.SentinelVerificationGate.verify") as mock_verify:
-        from app.sentinel.verification.verification_gate import VerificationResult
-        mock_verify.return_value = VerificationResult()
-        mock_call.return_value = mock_response
-
-        mock_call.return_value = mock_response
-
-        res = await MarcusGovernanceAnalyst.analyze_governance(unstable_branch)
-
-
-
-    assert res["is_stable"] is False
-
-    assert res["marcus_advisory_modifier"] < 1.0
-
-    assert len(res["warnings"]) > 0
-
-
-
-    # Non-authoritative assertion: Marcus emits dict values, does not mutate topology
-
-    assert isinstance(res, dict)
-
-    assert unstable_branch.topology_graph.nodes["dashboard_view"].integrity_hash != ""
-
-
-
-
 
 def test_sentinel_core_exploration_pipeline(base_graph, intent_field):
 
@@ -687,3 +611,153 @@ def test_mutation_engine_escape_proposals(base_graph):
     assert escapes[0].mutation_tier == MutationTier.COSMETIC
 
     assert escapes[0].action == "UPDATE_NODE"
+
+
+def test_linear_delta_alpha_drift_modifier(base_graph):
+    # Tests that raw_score is adjusted by delta_alpha_modifier
+    router = AttentionRouter(max_branches=3)
+    branch = BranchState(
+        branch_id="test_da",
+        topology_graph=base_graph,
+        attention_weight=1.0,
+        previous_attention_weight=1.0
+    )
+    # Mock SentinelTopologyVerifier.verify to return no failures
+    with patch("app.sentinel.verification.verification_gate.SentinelTopologyVerifier.verify") as mock_verify:
+        from app.sentinel.verification.verification_gate import TopologyVerificationResult
+        res = TopologyVerificationResult()
+        res.dependency_graph_survival = 1.0
+        res.schema_survival = 1.0
+        res.route_survival = 1.0
+        res.state_survival = 1.0
+        res.topology_survival = 1.0
+        res.failures = []
+        mock_verify.return_value = res
+
+        # Scored with previous weight = 1.0. Let's calculate the expected weight
+        # raw_score should be 1.0 (all survival metrics are 1.0, repulsion and novelty also close to 1.0)
+        # alpha_prev = 1.0
+        # delta_alpha = raw_score - alpha_prev = 0.0
+        # delta_alpha_modifier = 1.0 + (0.0 * 0.2) = 1.0
+        # final_weight = raw_score * 1.0 * marcus_mod(1.0) * goal_completion(1.0) = 1.0
+        # If we change previous_attention_weight to 0.5:
+        # delta_alpha = 1.0 - 0.5 = 0.5
+        # delta_alpha_modifier = 1.0 + (0.5 * 0.2) = 1.1
+        # final_weight should be 1.0 * 1.1 = 1.1
+        
+        branch.attention_weight = 1.0
+        branch.previous_attention_weight = 1.0
+        w1 = router.calculate_branch_weight(branch)
+        
+        branch.attention_weight = 1.0
+        branch.previous_attention_weight = 0.5
+        # Reset the repulsion check flag so it runs again
+        if hasattr(branch, "_repulsion_checked"):
+            delattr(branch, "_repulsion_checked")
+        w2 = router.calculate_branch_weight(branch)
+        
+        assert w2 > w1  # linear delta_alpha boost was applied
+
+
+def test_conditional_hard_repulsion_gate(base_graph):
+    # Setup temporary local SQLite database for failure memory
+    db_path = "tests/unit/temp_repulsion_gate_test.db"
+    if os.path.exists(db_path):
+        os.remove(db_path)
+
+    try:
+        geom = FailureGeometry(db_path)
+        
+        # 1. Store a historical state failure with 5 failures
+        # Matches base_graph layout: 1 UI node, 0 edges, 0 api, 0 schema
+        hist_vec = FailureGeometry.encode_failure(
+            node_count=1,
+            edge_count=0,
+            is_cyclic=False,
+            error_class="FRONTEND_BUILD_FAILURE",
+            mutation_tier=2,
+            error_len=25,
+            api_node_count=0,
+            ui_node_count=1,
+            schema_node_count=0,
+        )
+        geom.mal.insert_failure_record(
+            failure_id="hist-fail",
+            vector=hist_vec,
+            error_class="FRONTEND_BUILD_FAILURE",
+            cycle_id="cycle-1",
+            details="Frontend build failures details",
+            verification_stage="E2E State Profile",
+            status="COMMITTED",
+            failure_count=5
+        )
+
+        # Mock FailureGeometry to use this db_path
+        with patch("app.sentinel.failure_memory.failure_geometry.FailureGeometry.__init__", lambda self, *args, **kwargs: setattr(self, "mal", geom.mal)),              patch("app.sentinel.verification.verification_gate.SentinelTopologyVerifier.verify") as mock_verify:
+            
+            # Scenario A: Non-improving state (current failures = 5 >= historical failures = 5)
+            # This should be PRUNED
+            from app.sentinel.verification.verification_gate import TopologyVerificationResult, FailureFingerprint
+            res_non_improving = TopologyVerificationResult()
+            res_non_improving.dependency_graph_survival = 0.5
+            res_non_improving.schema_survival = 0.5
+            res_non_improving.route_survival = 0.5
+            res_non_improving.state_survival = 0.5
+            res_non_improving.topology_survival = 0.5
+            # We create 5 failures to match historical count
+            res_non_improving.failures = [
+                FailureFingerprint(failure_type="FRONTEND_BUILD_FAILURE", details="err1", stage="stage1")
+                for _ in range(5)
+            ]
+            mock_verify.return_value = res_non_improving
+
+            router = AttentionRouter(max_branches=3)
+            branch_a = BranchState(
+                branch_id="branch_a",
+                topology_graph=base_graph
+            )
+            
+            # Mock log to capture repulsion gate logging
+            with patch("app.core.logging.log") as mock_log:
+                router.calculate_branch_weight(branch_a)
+                
+                # Verify that it was pruned
+                assert branch_a.is_pruned is True
+                
+                # Check that [REPULSION_GATE] log was emitted with decision=PRUNE
+                log_calls = [call[0][1] for call in mock_log.call_args_list if call[0][0] == "COGNITION"]
+                assert any("[REPULSION_GATE]" in s and "decision=PRUNE" in s for s in log_calls)
+
+            # Scenario B: Improving state (current failures = 2 < historical failures = 5)
+            # This should be ALLOWED
+            res_improving = TopologyVerificationResult()
+            res_improving.dependency_graph_survival = 0.8
+            res_improving.schema_survival = 0.8
+            res_improving.route_survival = 0.8
+            res_improving.state_survival = 0.8
+            res_improving.topology_survival = 0.8
+            # 2 failures
+            res_improving.failures = [
+                FailureFingerprint(failure_type="FRONTEND_BUILD_FAILURE", details="err1", stage="stage1")
+                for _ in range(2)
+            ]
+            mock_verify.return_value = res_improving
+
+            branch_b = BranchState(
+                branch_id="branch_b",
+                topology_graph=base_graph
+            )
+            
+            with patch("app.core.logging.log") as mock_log:
+                router.calculate_branch_weight(branch_b)
+                
+                # Verify that it is NOT pruned
+                assert branch_b.is_pruned is False
+                
+                # Check that [REPULSION_GATE] log was emitted with decision=ALLOW
+                log_calls = [call[0][1] for call in mock_log.call_args_list if call[0][0] == "COGNITION"]
+                assert any("[REPULSION_GATE]" in s and "decision=ALLOW" in s for s in log_calls)
+
+    finally:
+        if os.path.exists(db_path):
+            os.remove(db_path)
