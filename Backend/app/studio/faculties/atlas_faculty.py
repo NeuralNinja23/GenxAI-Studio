@@ -31,6 +31,7 @@ You will receive:
   - The contents of the affected files
   - The current weighted loss score (oracle_before)
   - The active repair goals
+  - Optional historical_evidence showing past successful diffs for similar failures
 
 Output ONLY valid JSON in this exact shape (no markdown, no explanation):
 {
@@ -41,6 +42,7 @@ Output ONLY valid JSON in this exact shape (no markdown, no explanation):
 Rules:
   - Choose the single file most likely to reduce oracle loss if repaired.
   - The instruction must reference specific line numbers, imports, or constructs.
+  - If historical_evidence is provided, study how similar errors were resolved in the past and use that as guidance for your repair instructions.
   - Do NOT include a 'scope' field — that is determined by the execution kernel.
   - Do NOT generate code in your response — only the instruction.
 """
@@ -146,7 +148,20 @@ class AtlasFaculty:
                 "severity":     getattr(fp, "severity", 1.0),
             })
 
-        user_message = json.dumps({
+        # Fetch historical evidence from transition ledger
+        historical_evidence = ""
+        try:
+            from app.sentinel.experience.transition_ledger import TransitionLedger
+            ledger = TransitionLedger()
+            historical_evidence = ledger.get_evidence_context(
+                active_failures=failure_data,
+                target_file=None,
+                scope=None
+            )
+        except Exception as e:
+            log("ATLAS", f"⚠️ Failed to retrieve similarity evidence: {e}")
+
+        payload = {
             "oracle_before":      context.oracle_before,
             "goals":              context.goals,
             "state_fingerprint":  context.state_fingerprint.tolist()
@@ -154,7 +169,11 @@ class AtlasFaculty:
                                   else list(context.state_fingerprint),
             "failure_fingerprints": failure_data,
             "file_contents":      file_contents,
-        }, indent=2)
+        }
+        if historical_evidence:
+            payload["historical_evidence"] = historical_evidence
+
+        user_message = json.dumps(payload, indent=2)
 
         log("ATLAS", f"🔍 Sending repair context to LLM ({len(context.affected_files)} files, "
                      f"oracle={context.oracle_before:.2f})")

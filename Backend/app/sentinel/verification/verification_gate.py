@@ -73,6 +73,10 @@ class VerificationResult(BaseModel):
     recommendation: str = "PASS"
     failures: List[FailureFingerprint] = Field(default_factory=list)
     warnings: List[FailureFingerprint] = Field(default_factory=list)
+    compiler_output: Optional[str] = None
+    bundler_output: Optional[str] = None
+    runtime_output: Optional[str] = None
+    render_output: Optional[str] = None
 
     @property
     def overall_survival(self) -> float:
@@ -262,11 +266,14 @@ class SentinelVerificationGate:
                         text=True
                     )
                     
+                    combined_output = (proc.stdout or "") + "\n" + (proc.stderr or "")
+                    result.compiler_output = combined_output
+                    result.bundler_output = combined_output
+                    
                     if proc.returncode != 0:
                         # Parse tsc output
                         # Example: src/App.tsx(5,10): error TS2304: Cannot find name 'Dashboard'.
                         has_ts_errors = False
-                        combined_output = (proc.stdout or "") + "\n" + (proc.stderr or "")
                         for line in combined_output.splitlines():
                             if "error TS" in line:
                                 match = re.match(r'^(.*?)\(\d+,\d+\):\s+error\s+(TS\d+):\s+(.*)$', line)
@@ -326,6 +333,11 @@ class SentinelVerificationGate:
                     text=True,
                     shell=True
                 )
+                backend_output = (proc.stdout or "") + "\n" + (proc.stderr or "")
+                if result.compiler_output:
+                    result.compiler_output += "\n" + backend_output
+                else:
+                    result.compiler_output = backend_output
                 if proc.returncode != 0:
                     result.failures.append(
                         FailureFingerprint(
@@ -991,8 +1003,13 @@ class SentinelVerificationGate:
                 result.visual_survival = 1.0 if visual_ok else 0.0
                 result.visual_evaluated = True
                 
-            print(f"[VERIFY_RUNTIME] entrypoint={app_file.name} router_style={router_style}")
-            print(f"[VERIFY_RUNTIME] runtime_ok={runtime_ok} visual_ok={visual_ok if result.visual_evaluated else 'N/A'} visual_evaluated={result.visual_evaluated}")
+            log_str = (
+                f"[VERIFY_RUNTIME] entrypoint={app_file.name} router_style={router_style}\n"
+                f"[VERIFY_RUNTIME] runtime_ok={runtime_ok} visual_ok={visual_ok if result.visual_evaluated else 'N/A'} visual_evaluated={result.visual_evaluated}"
+            )
+            print(log_str)
+            result.runtime_output = log_str
+            result.render_output = log_str
 
         except Exception as e:
             result.runtime_passed = False

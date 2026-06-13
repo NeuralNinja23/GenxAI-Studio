@@ -67,6 +67,11 @@ class ProjectionCycleContext:
         self.transaction = None
         self.files_written = []
         self.succeeded = None
+        
+        # Transition identity fields
+        self.e2e_cycle_id = None
+        self.parent_transition_id = None
+        self.attempt_number = 1
 
         # ── Phase 3 Routing and Taxonomy Telemetry fields ────
         self.primary_failure_category: Optional[str] = None
@@ -231,10 +236,15 @@ class ExecutionKernel:
                 ctx._repair_outcome = outcome
                 ctx._repair_exhausted = repair_exhausted
 
-            # S-0.7 Post-Projection Regression Gate: check if projected errors increased compared to in-memory parent graph
-            from app.sentinel.verification.verification_gate import SentinelTopologyVerifier
-            parent_verification = SentinelTopologyVerifier.verify(graph)
-            parent_failures = parent_verification.failures
+            # S-0.7 Post-Projection Regression Gate: check if projected errors increased compared to correct baseline
+            if ctx.repair_intent is not None:
+                # During repair cycles, the baseline comparison list is the previous attempt's failures
+                parent_failures = ctx._repair_failures
+            else:
+                # During initial projection, comparison baseline is the in-memory parent graph topology verification failures
+                from app.sentinel.verification.verification_gate import SentinelTopologyVerifier
+                parent_verification = SentinelTopologyVerifier.verify(graph)
+                parent_failures = parent_verification.failures
             child_failures = verification.failures
 
             parent_set = {
@@ -398,6 +408,11 @@ class ExecutionKernel:
             termination_reason = getattr(ctx, "_telemetry_termination_reason", "Completed")
             failure_type = getattr(ctx, "_telemetry_failure_type", None)
             
+            try:
+                self._log_repair_mode_transition(ctx)
+            except Exception as e:
+                log("KERNEL", f"⚠️ Error logging repair transition: {e}")
+                
             ValidationRecorder.record_system_event("cycle_completed", "INFO", f"Completed in {duration_ms}ms")
             
             ValidationRecorder.record_projection_run({
@@ -445,6 +460,274 @@ class ExecutionKernel:
         await SubstrateManager.lock_substrate(project_id=project_id, project_path=project_path)
         log("KERNEL", f"🔒 Substrate locked for {project_id}")
 
+    def _compute_workspace_hash(self, project_path: Path) -> str:
+        import hashlib
+        import os
+        staging_path = project_path / ".genx_staging"
+        target_path = staging_path if staging_path.exists() else project_path
+        
+        hash_obj = hashlib.md5()
+        try:
+            files = []
+            for root, dirs, filenames in os.walk(target_path):
+                dirs[:] = [d for d in dirs if d not in (".git", ".venv", "node_modules", "archive", ".pytest_cache", "__pycache__")]
+                for f in filenames:
+                    files.append(Path(root) / f)
+            files.sort()
+            for f in files:
+                rel_path = f.relative_to(target_path).as_posix()
+                try:
+                    stat = f.stat()
+                    entry = f"{rel_path}:{stat.st_size}:{stat.st_mtime}"
+                    hash_obj.update(entry.encode("utf-8"))
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        return hash_obj.hexdigest()
+
+    def _log_repair_mode_transition(self, ctx: ProjectionCycleContext) -> None:
+        import sqlite3
+        import json
+        import datetime
+        from app.sentinel.validation.validation_logger import DB_PATH
+        from app.sentinel.topology.ast_projector import _REPAIR_PROMPT, BUILDER_PROMPT
+        
+        transition_id = ctx.cycle_id
+        parent_transition_id = getattr(ctx, "parent_transition_id", None)
+        cycle_id = getattr(ctx, "e2e_cycle_id", None) or ctx.cycle_id
+        workspace_id = ctx.project_id
+        attempt_number = getattr(ctx, "attempt_number", 1)
+        workspace_hash = self._compute_workspace_hash(ctx.project_path)
+        
+        # Oracle / failures
+        before_oracle = getattr(ctx, "oracle_before", None)
+        if before_oracle is None:
+            before_oracle = 0.0
+            
+        before_failures = []
+        before_failures_raw = getattr(ctx, "_repair_failures", [])
+        if before_failures_raw:
+            for f in before_failures_raw:
+                before_failures.append({
+                    "failure_type": getattr(f, "failure_type", "UNKNOWN"),
+                    "source": str(getattr(f, "source", "")),
+                    "stage": getattr(f, "stage", ""),
+                    "details": getattr(f, "details", ""),
+                    "file": str(getattr(f, "file", "")),
+                    "component": getattr(f, "component", None)
+                })
+        
+        before_verification_summary = {
+            "failures_count": len(before_failures)
+        }
+        
+        after_failures = []
+        after_verification_summary = {}
+        after_oracle = 0.0
+        
+        compiler_output = ""
+        bundler_output = ""
+        runtime_output = ""
+        render_output = ""
+        
+        verif = getattr(ctx, "verification", None)
+        if verif is not None:
+            after_failures_raw = getattr(verif, "failures", [])
+            for f in after_failures_raw:
+                after_failures.append({
+                    "failure_type": getattr(f, "failure_type", "UNKNOWN"),
+                    "source": str(getattr(f, "source", "")),
+                    "stage": getattr(f, "stage", ""),
+                    "details": getattr(f, "details", ""),
+                    "file": str(getattr(f, "file", "")),
+                    "component": getattr(f, "component", None)
+                })
+            after_verification_summary = {
+                "recommendation": getattr(verif, "recommendation", None),
+                "failure_classification": getattr(verif, "failure_classification", None),
+                "score": getattr(verif, "verification_score", 0.0)
+            }
+            compiler_output = getattr(verif, "compiler_output", "") or ""
+            bundler_output = getattr(verif, "bundler_output", "") or ""
+            runtime_output = getattr(verif, "runtime_output", "") or ""
+            render_output = getattr(verif, "render_output", "") or ""
+            
+            try:
+                from app.sentinel.config.oracle_policy import get_oracle_policy, compute_oracle
+                policy = get_oracle_policy()
+                after_oracle = compute_oracle(after_failures_raw, policy) if after_failures_raw else 0.0
+            except Exception:
+                after_oracle = float(len(after_failures_raw))
+        else:
+            after_oracle = 0.0 if ctx.succeeded else before_oracle
+            
+        target_file = None
+        instruction = None
+        repair_mode = "INITIAL_PROJECTION"
+        system_prompt = None
+        user_message = None
+        scope = None
+        
+        if getattr(ctx, "repair_intent", None) is not None:
+            intent = ctx.repair_intent
+            target_file = str(intent.target_file) if intent.target_file else None
+            instruction = intent.instruction
+            scope = getattr(ctx, "current_repair_scope", None)
+            if scope == RepairScope.COMPONENT:
+                repair_mode = "COMPONENT_REPAIR"
+            elif scope == RepairScope.MODULE:
+                repair_mode = "MODULE_REPAIR"
+            elif scope == RepairScope.FEATURE:
+                repair_mode = "FEATURE_REPAIR"
+            elif scope == RepairScope.WORKSPACE:
+                repair_mode = "WORKSPACE_REPAIR"
+            
+            system_prompt = _REPAIR_PROMPT
+            user_message = getattr(ctx, "_repair_prompt", None)
+        else:
+            user_message = getattr(ctx, "_initial_prompt", None)
+            system_prompt = BUILDER_PROMPT
+            
+        try:
+            # 1. Fetch verbatim source content and compute unified diff
+            before_source = None
+            after_source = None
+            diff = None
+            if target_file:
+                workspace_file_path = ctx.project_path / target_file
+                staging_file_path = ctx.project_path / ".genx_staging" / target_file
+                
+                if workspace_file_path.exists() and workspace_file_path.is_file():
+                    try:
+                        with open(workspace_file_path, "r", encoding="utf-8", errors="replace") as f_in:
+                            before_source = f_in.read()
+                    except Exception as read_err:
+                        log("KERNEL", f"⚠️ Error reading before_source: {read_err}")
+                        
+                if staging_file_path.exists() and staging_file_path.is_file():
+                    try:
+                        with open(staging_file_path, "r", encoding="utf-8", errors="replace") as f_in:
+                            after_source = f_in.read()
+                    except Exception as read_err:
+                        log("KERNEL", f"⚠️ Error reading after_source: {read_err}")
+                elif before_source is not None:
+                    after_source = before_source
+                    
+                if before_source is not None and after_source is not None:
+                    import difflib
+                    diff_lines = list(difflib.unified_diff(
+                        before_source.splitlines(keepends=True),
+                        after_source.splitlines(keepends=True),
+                        fromfile=f"a/{target_file}",
+                        tofile=f"b/{target_file}"
+                    ))
+                    diff = "".join(diff_lines)
+
+            # 2. Write to sentinel_experience.db via ExperienceMemoryAccessLayer
+            try:
+                from app.sentinel.experience.memory_access_layer import ExperienceMemoryAccessLayer
+                exp_mal = ExperienceMemoryAccessLayer()
+                scope_str = scope.name if hasattr(scope, "name") else str(scope) if scope else None
+                exp_mal.insert_transition(
+                    transition_id=transition_id,
+                    parent_transition_id=parent_transition_id,
+                    cycle_id=cycle_id,
+                    workspace_id=workspace_id,
+                    attempt_number=attempt_number,
+                    workspace_hash=workspace_hash,
+                    before_oracle=before_oracle,
+                    after_oracle=after_oracle,
+                    before_failures=before_failures,
+                    after_failures=after_failures,
+                    before_verification_summary=before_verification_summary,
+                    after_verification_summary=after_verification_summary,
+                    target_file=target_file,
+                    scope=scope_str,
+                    repair_mode=repair_mode,
+                    instruction=instruction,
+                    prompt=system_prompt,
+                    context_metadata={"user_message": user_message},
+                    before_source=before_source,
+                    after_source=after_source,
+                    diff=diff,
+                    compiler_output=compiler_output,
+                    bundler_output=bundler_output,
+                    runtime_output=runtime_output,
+                    render_output=render_output
+                )
+            except Exception as exp_err:
+                log("KERNEL", f"⚠️ Failed to insert experience transition: {exp_err}")
+
+            # 3. Legacy write to flat repair_mode_transitions (sentinel_validation V2.db)
+            DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+            conn = sqlite3.connect(str(DB_PATH), timeout=10.0)
+            cursor = conn.cursor()
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS repair_mode_transitions (
+                transition_id TEXT PRIMARY KEY,
+                parent_transition_id TEXT,
+                cycle_id TEXT,
+                workspace_id TEXT,
+                attempt_number INTEGER,
+                workspace_hash TEXT,
+                before_oracle REAL,
+                after_oracle REAL,
+                before_failures TEXT,
+                after_failures TEXT,
+                before_verification_summary TEXT,
+                after_verification_summary TEXT,
+                target_file TEXT,
+                repair_mode TEXT,
+                instruction TEXT,
+                system_prompt TEXT,
+                user_message TEXT,
+                compiler_output TEXT,
+                bundler_output TEXT,
+                runtime_output TEXT,
+                render_output TEXT,
+                timestamp DATETIME
+            )
+            """)
+            
+            cursor.execute("""
+            INSERT OR REPLACE INTO repair_mode_transitions (
+                transition_id, parent_transition_id, cycle_id, workspace_id, attempt_number,
+                workspace_hash, before_oracle, after_oracle, before_failures, after_failures,
+                before_verification_summary, after_verification_summary, target_file, repair_mode,
+                instruction, system_prompt, user_message, compiler_output, bundler_output,
+                runtime_output, render_output, timestamp
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                transition_id,
+                parent_transition_id,
+                cycle_id,
+                workspace_id,
+                attempt_number,
+                workspace_hash,
+                before_oracle,
+                after_oracle,
+                json.dumps(before_failures),
+                json.dumps(after_failures),
+                json.dumps(before_verification_summary),
+                json.dumps(after_verification_summary),
+                target_file,
+                repair_mode,
+                instruction,
+                system_prompt,
+                user_message,
+                compiler_output,
+                bundler_output,
+                runtime_output,
+                render_output,
+                datetime.datetime.utcnow().isoformat()
+            ))
+            conn.commit()
+            conn.close()
+            log("KERNEL", f"📊 Logged repair transition {transition_id} (Attempt {attempt_number}, Mode: {repair_mode}, before={before_oracle:.2f}, after={after_oracle:.2f})")
+        except Exception as db_err:
+            log("KERNEL", f"⚠️ Failed to log repair transition: {db_err}")
+
     async def rollback_cycle(self, ctx: ProjectionCycleContext, reason: str) -> None:
         """Public entry point to roll back a failed projection cycle."""
         await self._perform_rollback(ctx, reason)
@@ -457,7 +740,7 @@ class ExecutionKernel:
             # Save rejected projections: archive workspace/ instead of deleting it
             archive_dir = ctx.project_path.parent / "archive" / f"{ctx.project_id}_rejected_{int(time.time())}"
             try:
-                shutil.copytree(staging_path, archive_dir)
+                shutil.copytree(staging_path, archive_dir, dirs_exist_ok=True)
                 log("KERNEL", f"💾 Archived rejected projection workspace to: {archive_dir}")
             except Exception as archive_err:
                 log("KERNEL", f"⚠️ Failed to archive staging directory: {archive_err}")

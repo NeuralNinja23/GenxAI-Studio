@@ -314,6 +314,7 @@ class ASTProjector:
             print(f"[PROJECTOR]\nRepair Mode Activated\nscope={repair_scope.name}\nfiles_loaded={len(getattr(cycle_ctx, '_repair_failures', []))}")
             
             files_written = await self._run_repair_mode(
+                cycle_ctx=cycle_ctx,
                 staging_path=staging_path,
                 repair_intent=repair_intent,
                 repair_scope=repair_scope,
@@ -353,9 +354,11 @@ class ASTProjector:
             log("PROJECTOR", "📡 Initiating AST embodiment cycle via LLM...")
             # Serialize graphs or topologies
             serialized_graphs = graph.serialize() if hasattr(graph, "serialize") else str(graph)
+            user_msg = json.dumps({"graphs": serialized_graphs, "mutation": mutation_plan})
+            cycle_ctx._initial_prompt = user_msg
             response = await llm_client.generate(
                 system_prompt=BUILDER_PROMPT,
-                user_message=json.dumps({"graphs": serialized_graphs, "mutation": mutation_plan})
+                user_message=user_msg
             )
             
             # Run validation pipeline
@@ -460,6 +463,7 @@ class ASTProjector:
         repair_intent: RepairIntent,
         repair_scope: RepairScope,
         failures: list,
+        cycle_ctx=None,
     ) -> List[str]:
         """
         Execute targeted re-emission within the repair scope.
@@ -569,6 +573,8 @@ class ASTProjector:
         }, indent=2)
 
         log("PROJECTOR", f"📡 Repair Mode LLM call: {len(existing_contents)} files in scope")
+        if cycle_ctx is not None:
+            cycle_ctx._repair_prompt = user_message
 
         response = await self.llm_client.generate(
             system_prompt=_REPAIR_PROMPT,

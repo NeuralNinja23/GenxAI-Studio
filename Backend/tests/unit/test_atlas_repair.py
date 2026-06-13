@@ -538,3 +538,83 @@ def test_oracle_policy_loader_raises_on_malformed_file(tmp_path):
     bad_policy.write_text("{not: valid json}")
     with pytest.raises(InvalidOraclePolicyError):
         OraclePolicyLoader.load(bad_policy)
+
+
+# ─────────────────────────────────────────────────────────────
+# Test 16 — log_repair_mode_transition_in_sqlite
+# ─────────────────────────────────────────────────────────────
+
+def test_log_repair_mode_transition_in_sqlite(tmp_path):
+    """
+    ExecutionKernel._log_repair_mode_transition correctly writes the transition
+    to the repair_mode_transitions SQLite table in the validation database.
+    """
+    import sqlite3
+    from app.sentinel.runtime.execution_kernel import get_kernel
+    from app.sentinel.verification.verification_gate import VerificationResult
+    from app.sentinel.routing import FailureCategory
+
+    # Create mock cycle context
+    ctx = SimpleNamespace(
+        project_id="test_db_project",
+        cycle_id="test_cycle_123",
+        parent_transition_id="parent_cycle_456",
+        e2e_cycle_id="e2e_cycle_789",
+        project_path=tmp_path,
+        attempt_number=2,
+        succeeded=True,
+        oracle_before=5.0,
+        _repair_failures=[
+            SimpleNamespace(
+                failure_type="FRONTEND_BUILD_FAILURE",
+                source="COMPILER",
+                stage="Layer D",
+                details="Vite syntax error",
+                file="src/App.tsx",
+                component="App.tsx"
+            )
+        ],
+        repair_intent=RepairIntent(
+            target_file=Path("src/App.tsx"),
+            instruction="Fix Vite syntax error"
+        ),
+        current_repair_scope=RepairScope.COMPONENT,
+        _repair_prompt="Mock user LLM prompt",
+        verification=VerificationResult(
+            runtime_passed=True,
+            failures=[]
+        )
+    )
+
+    # Mock DB path to use a temp db file
+    temp_db_path = tmp_path / "test_sentinel_validation.db"
+    
+    with patch("app.sentinel.validation.validation_logger.DB_PATH", temp_db_path):
+        kernel = get_kernel()
+        kernel._log_repair_mode_transition(ctx)
+
+        # Check sqlite db
+        assert temp_db_path.exists()
+        conn = sqlite3.connect(str(temp_db_path))
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM repair_mode_transitions WHERE transition_id = 'test_cycle_123'")
+        row = cursor.fetchone()
+        assert row is not None
+
+        # Fetch column names
+        cursor.execute("PRAGMA table_info(repair_mode_transitions)")
+        cols = [c[1] for c in cursor.fetchall()]
+        row_dict = dict(zip(cols, row))
+
+        assert row_dict["parent_transition_id"] == "parent_cycle_456"
+        assert row_dict["cycle_id"] == "e2e_cycle_789"
+        assert row_dict["workspace_id"] == "test_db_project"
+        assert row_dict["attempt_number"] == 2
+        assert row_dict["before_oracle"] == 5.0
+        assert row_dict["after_oracle"] == 0.0
+        assert "FRONTEND_BUILD_FAILURE" in row_dict["before_failures"]
+        assert row_dict["target_file"] == "src\\App.tsx" or row_dict["target_file"] == "src/App.tsx"
+        assert row_dict["repair_mode"] == "COMPONENT_REPAIR"
+        assert row_dict["instruction"] == "Fix Vite syntax error"
+        assert "Mock user LLM prompt" in row_dict["user_message"]
+        conn.close()

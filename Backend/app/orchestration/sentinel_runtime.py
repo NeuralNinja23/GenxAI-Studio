@@ -134,6 +134,8 @@ class SentinelRuntime:
         oracle_before = None
         current_repair_scope = None
         consecutive_repair_failures = 0
+        repair_failures = []
+        last_transition_id = None
         active_run_cycles = []
 
         # Phase 3 Routing telemetry variables
@@ -175,6 +177,9 @@ class SentinelRuntime:
                 current_repair_scope = RepairScope.COMPONENT
             ctx.current_repair_scope = current_repair_scope
             ctx.consecutive_repair_failures = consecutive_repair_failures
+            ctx._repair_failures = list(repair_failures)
+            ctx.parent_transition_id = last_transition_id
+            ctx.attempt_number = attempt + 1
 
             ctx.primary_failure_category = primary_failure_category
             ctx.active_failure_categories = active_failure_categories
@@ -191,6 +196,9 @@ class SentinelRuntime:
             )
             success = result.get("success", False)
             verification = result.get("verification")
+            
+            # Update last_transition_id for the chronological ledger chain
+            last_transition_id = ctx.cycle_id
             
             if success:
                 log("SENTINEL_RUNTIME", "✅ Projection cycle verified successfully!")
@@ -301,12 +309,18 @@ class SentinelRuntime:
 
                 # Atlas succeeded — set on loop variable for NEXT cycle's projection context
                 ctx._repair_failures = list(failures)
+                repair_failures = list(failures)
                 
                 # Update current_repair_scope and consecutive_repair_failures from context
                 current_repair_scope = ctx.current_repair_scope
                 consecutive_repair_failures = ctx.consecutive_repair_failures
 
             elif route == RoutingDecision.TOPOLOGY:
+                # Reset repair state for topology branch projection
+                repair_failures = []
+                repair_intent = None
+                last_transition_id = None
+                
                 # Rollback staged projection before initiating branch mutations
                 await kernel.rollback_cycle(ctx, "Rollback staged failed projection on TOPOLOGY route before branch generation")
                 topology_search_executed = True
